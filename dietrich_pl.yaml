@@ -38,7 +38,8 @@ sensor:
     lambda: |-
       auto dietrich = new Dietrich(id(uart_bus));
       App.register_component(dietrich);
-      return {dietrich->state_sensor, dietrich->sub_state_sensor, dietrich->flow_temp_sensor, dietrich->return_temp_sensor, dietrich->outside_temp_sensor, dietrich->calorifier_temp_sensor, 
+      return {dietrich->state_sensor, dietrich->sub_state_sensor, 
+        dietrich->flow_temp_sensor, dietrich->return_temp_sensor, dietrich->outside_temp_sensor, dietrich->calorifier_temp_sensor, 
         dietrich->boiler_control_temp_sensor, dietrich->room_temp_sensor, dietrich->ch_setpoint_sensor, dietrich->dhw_setpoint_sensor, dietrich->room_temp_setpoint_sensor,
         dietrich->fan_speed_setpoint_sensor, dietrich->fan_speed_sensor,                  
         dietrich->ionisation_current_sensor, dietrich->internal_setpoint_sensor, dietrich->available_power_sensor, dietrich->pump_percentage_sensor,
@@ -124,15 +125,17 @@ sensor:
     - name: "Piec Mod.Controller Connected"
     - name: "Piec Heat demand from Mod.Controller"
     - name: "Piec Heat demand from on/off controller"
+    - name: "Piec Frost Protection"    
     - name: "Piec DHW Eco"
     - name: "Piec DHW Blocking"
     - name: "Piec Anti Legionella"
-    - name: "Piec DHW Heat Demand"
+    - name: "Piec DHW Heat Demand"    
     
     - name: "Piec hours_run_pump_sensor"
     - name: "Piec hours_run_3way_sensor"
     - name: "Piec hours_run_ch_sensor"
     - name: "Piec hours_run_dhw_sensor"
+    
     - name: "Piec power_supply_aval_hours_sensor"
     - name: "Piec pump_starts_sensor"
     - name: "Piec number_of3way_valce_cycles_sensor"
@@ -140,7 +143,7 @@ sensor:
     - name: "Piec total_burner_start_sensor"
     - name: "Piec failed_burner_start_sensor"
     - name: "Piec number_flame_loss_sensor"
-
+    
     
   - platform: wifi_signal
     name: "Piec WiFi Signal"

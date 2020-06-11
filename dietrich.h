@@ -335,11 +335,9 @@ class Dietrich : public PollingComponent, public UARTDevice {
     getSample();
     
     counter_timer++;
-    
-    ESP_LOGD("custom", "counter timer", counter_timer);
-    
-    if (counter_timer>=10) {
-    	delay(500);
+        
+    if (counter_timer>=12) {
+    	delay(200);
 			counter_timer=0;
 			getCounter();
     }

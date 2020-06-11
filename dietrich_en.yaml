@@ -121,6 +121,7 @@ sensor:
     - name: "Boiler Mod.Controller Connected"
     - name: "Boiler Heat demand from Mod.Controller"
     - name: "Boiler Heat demand from on/off controller"
+    - name: "Boiler Frost Protection"        
     - name: "Boiler DHW Eco"
     - name: "Boiler DHW Blocking"
     - name: "Boiler Anti Legionella"
