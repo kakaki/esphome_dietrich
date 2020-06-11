@@ -34,68 +34,98 @@ text_sensor:
     name: "Boiler state"
 
 sensor:
-- platform: custom
-  lambda: |-
-    auto dietrich = new Dietrich(id(uart_bus));
-    App.register_component(dietrich);
-    return {dietrich->state_sensor, dietrich->sub_state_sensor, dietrich->flow_temp_sensor, dietrich->return_temp_sensor, dietrich->outside_temp_sensor, dietrich->calorifier_temp_sensor, 
-       dietrich->boiler_control_temp_sensor, dietrich->room_temp_sensor, dietrich->ch_setpoint_sensor, dietrich->dhw_setpoint_sensor, dietrich->room_temp_setpoint_sensor,
-       dietrich->fan_speed_setpoint_sensor, dietrich->fan_speed_sensor
-    };
+  - platform: custom
+    lambda: |-
+      auto dietrich = new Dietrich(id(uart_bus));
+      App.register_component(dietrich);
+      return {dietrich->state_sensor, dietrich->sub_state_sensor, dietrich->flow_temp_sensor, dietrich->return_temp_sensor, dietrich->outside_temp_sensor, dietrich->calorifier_temp_sensor, 
+        dietrich->boiler_control_temp_sensor, dietrich->room_temp_sensor, dietrich->ch_setpoint_sensor, dietrich->dhw_setpoint_sensor, dietrich->room_temp_setpoint_sensor,
+        dietrich->fan_speed_setpoint_sensor, dietrich->fan_speed_sensor,
+        dietrich->ionisation_current_sensor, dietrich->internal_setpoint_sensor, dietrich->available_power_sensor, dietrich->pump_percentage_sensor,
+        dietrich->desired_max_power_sensor, dietrich->actual_power_sensor,
+        dietrich->demand_source_bit0_sensor, dietrich->demand_source_bit1_sensor, dietrich->demand_source_bit2_sensor, dietrich->demand_source_bit3_sensor,
+        dietrich->demand_source_bit4_sensor, dietrich->demand_source_bit5_sensor, dietrich->demand_source_bit6_sensor, dietrich->demand_source_bit7_sensor    
+       
+      };
 
-  sensors:
-  - id: dietrich_state
-    on_value:
-      then:
-        - lambda: |-
-            if (id(dietrich_state).state==0) {id(dietrich_state_txt).publish_state("0:Standby");}
-            else if (id(dietrich_state).state==1) {id(dietrich_state_txt).publish_state("1:Boiler start");}
-            else if (id(dietrich_state).state==2) {id(dietrich_state_txt).publish_state("2:Burner start");}
-            else if (id(dietrich_state).state==3) {id(dietrich_state_txt).publish_state("3:Burning CH");}
-            else if (id(dietrich_state).state==4) {id(dietrich_state_txt).publish_state("4:Burning DHW");}
-            else if (id(dietrich_state).state==5) {id(dietrich_state_txt).publish_state("5:Burner stop");}
-            else if (id(dietrich_state).state==6) {id(dietrich_state_txt).publish_state("6:Boiler stop");}
-            else if (id(dietrich_state).state==7) {id(dietrich_state_txt).publish_state("7:-");}
-            else if (id(dietrich_state).state==8) {id(dietrich_state_txt).publish_state("8:Controlled stop");}
-            else if (id(dietrich_state).state==9) {id(dietrich_state_txt).publish_state("9:Blocking mode");}
-            else if (id(dietrich_state).state==10) {id(dietrich_state_txt).publish_state("10:Locking mode");}
-            else if (id(dietrich_state).state==11) {id(dietrich_state_txt).publish_state("11:Chimney mode L");}
-            else if (id(dietrich_state).state==12) {id(dietrich_state_txt).publish_state("12:Chimney mode h");}
-            else if (id(dietrich_state).state==13) {id(dietrich_state_txt).publish_state("13:Chimney mode H");}
-            else if (id(dietrich_state).state==14) {id(dietrich_state_txt).publish_state("14:-");}
-            else if (id(dietrich_state).state==15) {id(dietrich_state_txt).publish_state("15:Manual-heatdemand");}
-            else if (id(dietrich_state).state==16) {id(dietrich_state_txt).publish_state("16:Boiler-frost-protection");}
-            else if (id(dietrich_state).state==17) {id(dietrich_state_txt).publish_state("17:De-aeration");} //
-            else 
-              {id(dietrich_state_txt).publish_state("999:Unknown");}
+    sensors:
+    - id: dietrich_state
+      on_value:
+        then:
+          - lambda: |-
+              if (id(dietrich_state).state==0) {id(dietrich_state_txt).publish_state("0:Standby");}
+              else if (id(dietrich_state).state==1) {id(dietrich_state_txt).publish_state("1:Boiler start");}
+              else if (id(dietrich_state).state==2) {id(dietrich_state_txt).publish_state("2:Burner start");}
+              else if (id(dietrich_state).state==3) {id(dietrich_state_txt).publish_state("3:Burning CH");}
+              else if (id(dietrich_state).state==4) {id(dietrich_state_txt).publish_state("4:Burning DHW");}
+              else if (id(dietrich_state).state==5) {id(dietrich_state_txt).publish_state("5:Burner stop");}
+              else if (id(dietrich_state).state==6) {id(dietrich_state_txt).publish_state("6:Boiler stop");}
+              else if (id(dietrich_state).state==7) {id(dietrich_state_txt).publish_state("7:-");}
+              else if (id(dietrich_state).state==8) {id(dietrich_state_txt).publish_state("8:Controlled stop");}
+              else if (id(dietrich_state).state==9) {id(dietrich_state_txt).publish_state("9:Blocking mode");}
+              else if (id(dietrich_state).state==10) {id(dietrich_state_txt).publish_state("10:Locking mode");}
+              else if (id(dietrich_state).state==11) {id(dietrich_state_txt).publish_state("11:Chimney mode L");}
+              else if (id(dietrich_state).state==12) {id(dietrich_state_txt).publish_state("12:Chimney mode h");}
+              else if (id(dietrich_state).state==13) {id(dietrich_state_txt).publish_state("13:Chimney mode H");}
+              else if (id(dietrich_state).state==14) {id(dietrich_state_txt).publish_state("14:-");}
+              else if (id(dietrich_state).state==15) {id(dietrich_state_txt).publish_state("15:Manual-heatdemand");}
+              else if (id(dietrich_state).state==16) {id(dietrich_state_txt).publish_state("16:Boiler-frost-protection");}
+              else if (id(dietrich_state).state==17) {id(dietrich_state_txt).publish_state("17:De-aeration");} //
+              else 
+                {id(dietrich_state_txt).publish_state("999:Unknown");}
 
-  - name: "Boiler Podstatus"
-  - name: "Boiler flow temp"
-    unit_of_measurement: °C
-    accuracy_decimals: 2
-  - name: "Boiler return temp"
-    unit_of_measurement: °C
-    accuracy_decimals: 2
-  - name: "Boiler outside temp"
-    unit_of_measurement: °C
-    accuracy_decimals: 2
-  - name: "Boiler calorifier temp"
-    unit_of_measurement: °C
-    accuracy_decimals: 2
-  - name: "Boiler control temp"
-    unit_of_measurement: °C
-    accuracy_decimals: 2
-  - name: "Boiler room temp"
-    unit_of_measurement: °C
-    accuracy_decimals: 2
-  - name: "Boiler setpoint CH "
-    unit_of_measurement: °C
-    accuracy_decimals: 2
-  - name: "Boiler setpoint DHW"
-    unit_of_measurement: °C
-    accuracy_decimals: 2  
-  - name: "Boiler setpoint room"
-    unit_of_measurement: °C
-    accuracy_decimals: 2  
-  - name: "Boiler setpoint fanspeed"
-  - name: "Boiler fanspeed"    
+    - name: "Boiler Podstatus"
+    - name: "Boiler flow temp"
+      unit_of_measurement: °C
+      accuracy_decimals: 2
+    - name: "Boiler return temp"
+      unit_of_measurement: °C
+      accuracy_decimals: 2
+    - name: "Boiler outside temp"
+      unit_of_measurement: °C
+      accuracy_decimals: 2
+    - name: "Boiler calorifier temp"
+      unit_of_measurement: °C
+      accuracy_decimals: 2
+    - name: "Boiler control temp"
+      unit_of_measurement: °C
+      accuracy_decimals: 2
+    - name: "Boiler room temp"
+      unit_of_measurement: °C
+      accuracy_decimals: 2
+    - name: "Boiler setpoint CH "
+      unit_of_measurement: °C
+      accuracy_decimals: 2
+    - name: "Boiler setpoint DHW"
+      unit_of_measurement: °C
+      accuracy_decimals: 2  
+    - name: "Boiler setpoint room"
+      unit_of_measurement: °C
+      accuracy_decimals: 2  
+    - name: "Boiler setpoint fanspeed"
+    - name: "Boiler fanspeed"    
+    
+    - name: "Boiler ionisation_current"
+    - name: "Boiler internal_setpoint"
+    - name: "Boiler available_power"
+    - name: "Boiler pump_percentage"
+      unit_of_measurement: "%"
+      accuracy_decimals: 0  
+  
+    - name: "Boiler desired_max_power"
+    - name: "Boiler actual_power"
+  
+    - name: "Boiler Mod.Controller Connected"
+    - name: "Boiler Heat demand from Mod.Controller"
+    - name: "Boiler Heat demand from on/off controller"
+    - name: "Boiler DHW Eco"
+    - name: "Boiler DHW Blocking"
+    - name: "Boiler Anti Legionella"
+    - name: "Boiler DHW Heat Demand"
+    
+  - platform: wifi_signal
+    name: "Boiler WiFi Signal"
+    update_interval: 60s
+    
+  - platform: uptime
+    name: "Boiler Uptime"  

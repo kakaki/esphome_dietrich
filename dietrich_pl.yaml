@@ -34,72 +34,106 @@ text_sensor:
     name: "Piec Status"
 
 sensor:
-- platform: custom
-  lambda: |-
-    auto dietrich = new Dietrich(id(uart_bus));
-    App.register_component(dietrich);
-    return {dietrich->state_sensor, dietrich->sub_state_sensor, dietrich->flow_temp_sensor, dietrich->return_temp_sensor, dietrich->outside_temp_sensor, dietrich->calorifier_temp_sensor, 
-       dietrich->boiler_control_temp_sensor, dietrich->room_temp_sensor, dietrich->ch_setpoint_sensor, dietrich->dhw_setpoint_sensor, dietrich->room_temp_setpoint_sensor,
-       dietrich->fan_speed_setpoint_sensor, dietrich->fan_speed_sensor
-    };
+  - platform: custom
+    lambda: |-
+      auto dietrich = new Dietrich(id(uart_bus));
+      App.register_component(dietrich);
+      return {dietrich->state_sensor, dietrich->sub_state_sensor, dietrich->flow_temp_sensor, dietrich->return_temp_sensor, dietrich->outside_temp_sensor, dietrich->calorifier_temp_sensor, 
+        dietrich->boiler_control_temp_sensor, dietrich->room_temp_sensor, dietrich->ch_setpoint_sensor, dietrich->dhw_setpoint_sensor, dietrich->room_temp_setpoint_sensor,
+        dietrich->fan_speed_setpoint_sensor, dietrich->fan_speed_sensor,                  
+        dietrich->ionisation_current_sensor, dietrich->internal_setpoint_sensor, dietrich->available_power_sensor, dietrich->pump_percentage_sensor,
+        dietrich->desired_max_power_sensor, dietrich->actual_power_sensor,
+        dietrich->demand_source_bit0_sensor, dietrich->demand_source_bit1_sensor, dietrich->demand_source_bit2_sensor, dietrich->demand_source_bit3_sensor,
+        dietrich->demand_source_bit4_sensor, dietrich->demand_source_bit5_sensor, dietrich->demand_source_bit6_sensor, dietrich->demand_source_bit7_sensor    
+       
+      };
 
-  sensors:
-  - id: piec_status
-    on_value:
-      then:
-        - lambda: |-
-            if (id(piec_status).state==0) {id(piec_status_txt).publish_state("0:Czuwanie");} //Standby
-            else if (id(piec_status).state==1) {id(piec_status_txt).publish_state("1:Uruchomienie kotła");} //Boiler start
-            else if (id(piec_status).state==2) {id(piec_status_txt).publish_state("2:Uruchomienie palnika");} //Burner start
-            else if (id(piec_status).state==3) {id(piec_status_txt).publish_state("3:Ogrzewanie CO");} //Burning CH
-            else if (id(piec_status).state==4) {id(piec_status_txt).publish_state("4:Ogrzewanie CWU");} //Burning DHW
-            else if (id(piec_status).state==5) {id(piec_status_txt).publish_state("5:Zatrzymanie palnika");} //Burner stop
-            else if (id(piec_status).state==6) {id(piec_status_txt).publish_state("6:Zatrzymanie kotła");} //Boiler stop
-            else if (id(piec_status).state==7) {id(piec_status_txt).publish_state("7:-");}
-            else if (id(piec_status).state==8) {id(piec_status_txt).publish_state("8:Kontrolowane zatrzymanie");} //Controlled stop
-            else if (id(piec_status).state==9) {id(piec_status_txt).publish_state("9:Tryb blokowania");} //Blocking mode
-            else if (id(piec_status).state==10) {id(piec_status_txt).publish_state("10:Locking mode");}
-            else if (id(piec_status).state==11) {id(piec_status_txt).publish_state("11:Chimney mode L");}
-            else if (id(piec_status).state==12) {id(piec_status_txt).publish_state("12:Chimney mode h");}
-            else if (id(piec_status).state==13) {id(piec_status_txt).publish_state("13:Chimney mode H");}
-            else if (id(piec_status).state==14) {id(piec_status_txt).publish_state("14:-");}
-            else if (id(piec_status).state==15) {id(piec_status_txt).publish_state("15:Manual-heatdemand");}
-            else if (id(piec_status).state==16) {id(piec_status_txt).publish_state("16:Zabezpieczenie przed zamarzaniem");} //Boiler-frost-protection
-            else if (id(piec_status).state==17) {id(piec_status_txt).publish_state("17:Odpowietrzanie");} //De-aeration
-            else 
-              {id(piec_status_txt).publish_state("999:Unknown");}
+    sensors:
+    - id: piec_status
+      on_value:
+        then:
+          - lambda: |-
+              if (id(piec_status).state==0) {id(piec_status_txt).publish_state("0:Czuwanie");} //Standby
+              else if (id(piec_status).state==1) {id(piec_status_txt).publish_state("1:Uruchomienie kotła");} //Boiler start
+              else if (id(piec_status).state==2) {id(piec_status_txt).publish_state("2:Uruchomienie palnika");} //Burner start
+              else if (id(piec_status).state==3) {id(piec_status_txt).publish_state("3:Ogrzewanie CO");} //Burning CH
+              else if (id(piec_status).state==4) {id(piec_status_txt).publish_state("4:Ogrzewanie CWU");} //Burning DHW
+              else if (id(piec_status).state==5) {id(piec_status_txt).publish_state("5:Zatrzymanie palnika");} //Burner stop
+              else if (id(piec_status).state==6) {id(piec_status_txt).publish_state("6:Zatrzymanie kotła");} //Boiler stop
+              else if (id(piec_status).state==7) {id(piec_status_txt).publish_state("7:-");}
+              else if (id(piec_status).state==8) {id(piec_status_txt).publish_state("8:Kontrolowane zatrzymanie");} //Controlled stop
+              else if (id(piec_status).state==9) {id(piec_status_txt).publish_state("9:Tryb blokowania");} //Blocking mode
+              else if (id(piec_status).state==10) {id(piec_status_txt).publish_state("10:Locking mode");}
+              else if (id(piec_status).state==11) {id(piec_status_txt).publish_state("11:Chimney mode L");}
+              else if (id(piec_status).state==12) {id(piec_status_txt).publish_state("12:Chimney mode h");}
+              else if (id(piec_status).state==13) {id(piec_status_txt).publish_state("13:Chimney mode H");}
+              else if (id(piec_status).state==14) {id(piec_status_txt).publish_state("14:-");}
+              else if (id(piec_status).state==15) {id(piec_status_txt).publish_state("15:Manual-heatdemand");}
+              else if (id(piec_status).state==16) {id(piec_status_txt).publish_state("16:Zabezpieczenie przed zamarzaniem");} //Boiler-frost-protection
+              else if (id(piec_status).state==17) {id(piec_status_txt).publish_state("17:Odpowietrzanie");} //De-aeration
+              else 
+                {id(piec_status_txt).publish_state("999:Unknown");}
 
-  - name: "Piec Podstatus"
-  - name: "Piec temp. przepływu"
-    unit_of_measurement: °C
-    accuracy_decimals: 2
-  - name: "Piec temp. powrotu"
-    unit_of_measurement: °C
-    accuracy_decimals: 2
-  - name: "Piec temp. zewnętrzna"
-    unit_of_measurement: °C
-    accuracy_decimals: 2
-  - name: "Piec temp. podgrzewacza"
-    unit_of_measurement: °C
-    accuracy_decimals: 2
-  - name: "Piec temp. pieca"
-    unit_of_measurement: °C
-    accuracy_decimals: 2
-  - name: "Piec temp. pomieszczenia"
-    unit_of_measurement: °C
-    accuracy_decimals: 2
-  - name: "Piec zadana temp. CO"
-    unit_of_measurement: °C
-    accuracy_decimals: 2
-  - name: "Piec zadana temp. CWU"
-    unit_of_measurement: °C
-    accuracy_decimals: 2  
-  - name: "Piec zadana temp. pomieszczenia"
-    unit_of_measurement: °C
-    accuracy_decimals: 2  
-  - name: "Piec zadana prędkość wentylatora"
-  - name: "Piec prędkość wentylatora"
+    - name: "Piec Podstatus"
+    - name: "Piec temp. przepływu"
+      unit_of_measurement: °C
+      accuracy_decimals: 2
+    - name: "Piec temp. powrotu"
+      unit_of_measurement: °C
+      accuracy_decimals: 2
+    - name: "Piec temp. zewnętrzna"
+      unit_of_measurement: °C
+      accuracy_decimals: 2
+    - name: "Piec temp. podgrzewacza"
+      unit_of_measurement: °C
+      accuracy_decimals: 2
+    - name: "Piec temp. pieca"
+      unit_of_measurement: °C
+      accuracy_decimals: 2
+    - name: "Piec temp. pomieszczenia"
+      unit_of_measurement: °C
+      accuracy_decimals: 2
+    - name: "Piec zadana temp. CO"
+      unit_of_measurement: °C
+      accuracy_decimals: 2
+    - name: "Piec zadana temp. CWU"
+      unit_of_measurement: °C
+      accuracy_decimals: 2  
+    - name: "Piec zadana temp. pomieszczenia"
+      unit_of_measurement: °C
+      accuracy_decimals: 2  
+    - name: "Piec zadana prędkość wentylatora"
+      unit_of_measurement: s
+      accuracy_decimals: 0  
+    - name: "Piec prędkość wentylatora"
+      unit_of_measurement: s
+      accuracy_decimals: 0  
+  
+    - name: "Piec ionisation_current"
+    - name: "Piec internal_setpoint"
+    - name: "Piec available_power"
+    - name: "Piec pump_percentage"
+      unit_of_measurement: "%"
+      accuracy_decimals: 0  
+  
+    - name: "Piec desired_max_power"
+    - name: "Piec actual_power"
+  
+    - name: "Piec Mod.Controller Connected"
+    - name: "Piec Heat demand from Mod.Controller"
+    - name: "Piec Heat demand from on/off controller"
+    - name: "Piec DHW Eco"
+    - name: "Piec DHW Blocking"
+    - name: "Piec Anti Legionella"
+    - name: "Piec DHW Heat Demand"
     
+  - platform: wifi_signal
+    name: "Piec WiFi Signal"
+    update_interval: 60s
+    
+  - platform: uptime
+    name: "Piec Uptime"  
+      
   # - name: "My Custom Pressure Sensor"
   #   unit_of_measurement: hPa
   #   accuracy_decimals: 2
