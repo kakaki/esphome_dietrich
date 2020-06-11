@@ -44,8 +44,10 @@ sensor:
         dietrich->ionisation_current_sensor, dietrich->internal_setpoint_sensor, dietrich->available_power_sensor, dietrich->pump_percentage_sensor,
         dietrich->desired_max_power_sensor, dietrich->actual_power_sensor,
         dietrich->demand_source_bit0_sensor, dietrich->demand_source_bit1_sensor, dietrich->demand_source_bit2_sensor, dietrich->demand_source_bit3_sensor,
-        dietrich->demand_source_bit4_sensor, dietrich->demand_source_bit5_sensor, dietrich->demand_source_bit6_sensor, dietrich->demand_source_bit7_sensor    
-       
+        dietrich->demand_source_bit4_sensor, dietrich->demand_source_bit5_sensor, dietrich->demand_source_bit6_sensor, dietrich->demand_source_bit7_sensor,      
+        dietrich->hours_run_pump_sensor, dietrich->hours_run_3way_sensor, dietrich->hours_run_ch_sensor, dietrich->hours_run_dhw_sensor,
+        dietrich->power_supply_aval_hours_sensor, dietrich->pump_starts_sensor, dietrich->number_of3way_valce_cycles_sensor, dietrich->burner_start_dhw_sensor,
+        dietrich->total_burner_start_sensor, dietrich->failed_burner_start_sensor, dietrich->number_flame_loss_sensor,       
       };
 
     sensors:
@@ -126,6 +128,19 @@ sensor:
     - name: "Piec DHW Blocking"
     - name: "Piec Anti Legionella"
     - name: "Piec DHW Heat Demand"
+    
+    - name: "Piec hours_run_pump_sensor"
+    - name: "Piec hours_run_3way_sensor"
+    - name: "Piec hours_run_ch_sensor"
+    - name: "Piec hours_run_dhw_sensor"
+    - name: "Piec power_supply_aval_hours_sensor"
+    - name: "Piec pump_starts_sensor"
+    - name: "Piec number_of3way_valce_cycles_sensor"
+    - name: "Piec burner_start_dhw_sensor"
+    - name: "Piec total_burner_start_sensor"
+    - name: "Piec failed_burner_start_sensor"
+    - name: "Piec number_flame_loss_sensor"
+
     
   - platform: wifi_signal
     name: "Piec WiFi Signal"

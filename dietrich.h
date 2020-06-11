@@ -2,6 +2,8 @@
 
 class Dietrich : public PollingComponent, public UARTDevice {
  public:
+ 
+  //sample data sensors
   Sensor *flow_temp_sensor = new Sensor(); 
   Sensor *return_temp_sensor = new Sensor(); 
   Sensor *dhw_in_temp_sensor = new Sensor(); 
@@ -37,7 +39,28 @@ class Dietrich : public PollingComponent, public UARTDevice {
   Sensor *state_sensor = new Sensor();
   Sensor *sub_state_sensor = new Sensor();
   
+  //counter data sensors 1
+  
+	Sensor *hours_run_pump_sensor = new Sensor();
+	Sensor *hours_run_3way_sensor = new Sensor();
+	Sensor *hours_run_ch_sensor = new Sensor();
+	Sensor *hours_run_dhw_sensor = new Sensor();
+
+	Sensor *power_supply_aval_hours_sensor = new Sensor();
+	Sensor *pump_starts_sensor = new Sensor();
+	Sensor *number_of3way_valce_cycles_sensor = new Sensor();
+	Sensor *burner_start_dhw_sensor = new Sensor();
+
+  //counter data sensors 2
+	Sensor *total_burner_start_sensor = new Sensor();
+	Sensor *failed_burner_start_sensor = new Sensor();
+	Sensor *number_flame_loss_sensor = new Sensor();
+
+  
   Dietrich(UARTComponent *parent) : PollingComponent(10000), UARTDevice(parent) {}
+  
+  bool sem_reading_data = false;
+  int counter_timer = 99;
 
   byte sample[10] =    {0x02, 0xFE, 0x01, 0x05, 0x08, 0x02, 0x01, 0x69, 0xAB, 0x03 };
   byte counter1[10] =  {0x02, 0xFE, 0x00, 0x05, 0x08, 0x10, 0x1C, 0x98, 0xC2, 0x03 };
@@ -68,7 +91,7 @@ class Dietrich : public PollingComponent, public UARTDevice {
       readdata[n] = read();
       n++;
     }
-    
+        
     if (readdata[0]==2 && readdata[1]==1 && readdata[2]==254) {//add crc check
     
         float temp = 0.0;
@@ -77,73 +100,97 @@ class Dietrich : public PollingComponent, public UARTDevice {
         temp = (readdata[8]*256)+readdata[7];
         if (temp>32768) temp = temp-65536;
         flow_temp_sensor->publish_state(temp*0.01);
+
+        delay(100); //delay for esphome to not disconnect api
         
         temp = (readdata[10]*256)+readdata[9];
         if (temp>32768) temp = temp-65536;
         return_temp_sensor->publish_state(temp*0.01);
+
+        delay(100); //delay for esphome to not disconnect api
         
         temp = (readdata[12]*256)+readdata[11];
         if (temp>32768) temp = temp-65536;
         dhw_in_temp_sensor->publish_state(temp*0.01);
         
-        delay(200); //delay for esphome to not disconnect api
+        delay(100); //delay for esphome to not disconnect api
                 
         temp = (readdata[14]*256)+readdata[13];
         if (temp>32768) temp = temp-65536;
         outside_temp_sensor->publish_state(temp*0.01);
+
+        delay(100); //delay for esphome to not disconnect api
         
         temp = (readdata[16]*256)+readdata[15];
         if (temp>32768) temp = temp-65536;
         calorifier_temp_sensor->publish_state(temp*0.01);
         
+        delay(100); //delay for esphome to not disconnect api
         
         temp = (readdata[20]*256)+readdata[19];
         if (temp>32768) temp = temp-65536;
         boiler_control_temp_sensor->publish_state(temp*0.01);
 
-        delay(200); //delay for esphome to not disconnect api
+        delay(100); //delay for esphome to not disconnect api
         
         temp = (readdata[22]*256)+readdata[21];
         if (temp>32768) temp = temp-65536;
         room_temp_sensor->publish_state(temp*0.01);
+
+        delay(100); //delay for esphome to not disconnect api
         
         temp = (readdata[24]*256)+readdata[23];
         if (temp>32768) temp = temp-65536;
         ch_setpoint_sensor->publish_state(temp*0.01);
+
+        delay(100); //delay for esphome to not disconnect api
         
         temp = (readdata[26]*256)+readdata[25];
         if (temp>32768) temp = temp-65536;
         dhw_setpoint_sensor->publish_state(temp*0.01);
 
-        delay(200); //delay for esphome to not disconnect api
+        delay(100); //delay for esphome to not disconnect api
         
         temp = (readdata[28]*256)+readdata[27];
         if (temp>32768) temp = temp-65536;
         room_temp_setpoint_sensor->publish_state(temp*0.01);
+
+        delay(100); //delay for esphome to not disconnect api
                 
         temp = (readdata[30]*256)+readdata[29];
         if (temp>32768) temp = temp-65536;
         fan_speed_setpoint_sensor->publish_state(temp*0.01);
+
+        delay(100); //delay for esphome to not disconnect api
         
         temp = (readdata[32]*256)+readdata[31];
         if (temp>32768) temp = temp-65536;
         fan_speed_sensor->publish_state(temp*0.01);
         
-        delay(200); //delay for esphome to not disconnect api
+        delay(100); //delay for esphome to not disconnect api
         
         ionisation_current_sensor->publish_state(readdata[33]);
+
+        delay(100); //delay for esphome to not disconnect api
         
         temp = (readdata[35]*256)+readdata[33];
         if (temp>32768) temp = temp-65536;
         internal_setpoint_sensor->publish_state(temp*0.01);
 
+        delay(100); //delay for esphome to not disconnect api
+
         available_power_sensor->publish_state(readdata[36]);
 
-        delay(200); //delay for esphome to not disconnect api
+        delay(100); //delay for esphome to not disconnect api
 
         pump_percentage_sensor->publish_state(readdata[37]);
+
+        delay(100); //delay for esphome to not disconnect api
         
         desired_max_power_sensor->publish_state(readdata[39]);
+
+        delay(100); //delay for esphome to not disconnect api
+
         actual_power_sensor->publish_state(readdata[40]);          
         
         delay(200); //delay for esphome to not disconnect api
@@ -151,32 +198,51 @@ class Dietrich : public PollingComponent, public UARTDevice {
         bits = readdata[43];
         
         demand_source_bit0_sensor->publish_state(bitRead(bits, 0));
+
+        delay(100); //delay for esphome to not disconnect api
+
         demand_source_bit1_sensor->publish_state(bitRead(bits, 1));        
+
+        delay(100); //delay for esphome to not disconnect api
+
         demand_source_bit2_sensor->publish_state(bitRead(bits, 2));  		
 
-        delay(200); //delay for esphome to not disconnect api
+        delay(100); //delay for esphome to not disconnect api
 
         demand_source_bit3_sensor->publish_state(bitRead(bits, 3));        
+
+        delay(100); //delay for esphome to not disconnect api
+
         demand_source_bit4_sensor->publish_state(bitRead(bits, 4));
+
+        delay(100); //delay for esphome to not disconnect api
+
         demand_source_bit5_sensor->publish_state(bitRead(bits, 5));
 
-        delay(200); //delay for esphome to not disconnect api
+        delay(100); //delay for esphome to not disconnect api
 
         demand_source_bit6_sensor->publish_state(bitRead(bits, 6));
+
+        delay(100); //delay for esphome to not disconnect api
+
         demand_source_bit7_sensor->publish_state(bitRead(bits, 7));                                
   
-        
-        delay(200); //delay for esphome to not disconnect api
+        delay(100); //delay for esphome to not disconnect api
         
         state_sensor->publish_state(readdata[47]);
+
+        delay(100); //delay for esphome to not disconnect api
+
         sub_state_sensor->publish_state(readdata[50]);
+                
     }
     else {
         ESP_LOGD("custom", "crc error");
     }
     
     array_to_string(readdata, 80, str);
-    ESP_LOGD("custom", "data: %s", str);
+    ESP_LOGD("custom", "data: %s", str);    
+    
   }
   
   void getCounter() {
@@ -194,6 +260,38 @@ class Dietrich : public PollingComponent, public UARTDevice {
       n++;
     }
     
+    if (readdata[0]==2 && readdata[1]==0 && readdata[2]==254) {//add crc check
+    
+      hours_run_pump_sensor->publish_state(((readdata[7]*256)+readdata[8])*2);
+      
+			delay(100); //delay for esphome to not disconnect api
+      
+      hours_run_3way_sensor->publish_state(((readdata[9]*256)+readdata[10])*2);      
+
+			delay(100); //delay for esphome to not disconnect api
+
+      hours_run_ch_sensor->publish_state(((readdata[11]*256)+readdata[12])*2);
+
+			delay(100); //delay for esphome to not disconnect api
+
+      hours_run_dhw_sensor->publish_state(((readdata[13]*256)+readdata[14])*2);
+
+      power_supply_aval_hours_sensor->publish_state(((readdata[15]*256)+readdata[16])*2);
+
+			delay(100); //delay for esphome to not disconnect api
+
+      pump_starts_sensor->publish_state(((readdata[17]*256)+readdata[18])*8);
+
+			delay(100); //delay for esphome to not disconnect api
+
+      number_of3way_valce_cycles_sensor->publish_state(((readdata[19]*256)+readdata[20])*8);
+
+			delay(100); //delay for esphome to not disconnect api
+
+      burner_start_dhw_sensor->publish_state(((readdata[21]*256)+readdata[22])*8);
+
+    }
+    
     array_to_string(readdata, 28, str);
     ESP_LOGD("custom", "data: %s", str);
     
@@ -205,6 +303,20 @@ class Dietrich : public PollingComponent, public UARTDevice {
       readdata[n] = read();
       n++;
     }
+
+    if (readdata[0]==2 && readdata[1]==0 && readdata[2]==254) {//add crc check
+      total_burner_start_sensor->publish_state(((readdata[7]*256)+readdata[8])*8);
+
+			delay(100); //delay for esphome to not disconnect api
+
+      failed_burner_start_sensor->publish_state(((readdata[9]*256)+readdata[10]));
+
+			delay(100); //delay for esphome to not disconnect api
+
+      number_flame_loss_sensor->publish_state(((readdata[11]*256)+readdata[12]));
+    
+	}
+
     
     array_to_string(readdata, 28, str);
     ESP_LOGD("custom", "data: %s", str);
@@ -214,9 +326,25 @@ class Dietrich : public PollingComponent, public UARTDevice {
   }
 
   void update() override {
+  
+    if (sem_reading_data) return;
+    
+      
+    sem_reading_data=true;
+    
     getSample();
-    delay(500);
-    //getCounter();
+    
+    counter_timer++;
+    
+    ESP_LOGD("custom", "counter timer", counter_timer);
+    
+    if (counter_timer>=10) {
+    	delay(500);
+			counter_timer=0;
+			getCounter();
+    }
+    
+    sem_reading_data=false;
     
   }
 };
