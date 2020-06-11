@@ -28,4 +28,4 @@ And in printed box.
 
 ![Screenshot](box.jpg)
 
-Thanks to great work from https://github.com/bernie-gitmans/remeha - for creating maping of data in excel file.
+Thanks to great work from https://github.com/rjblake/remeha - for creating maping of data in excel file.
