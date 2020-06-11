@@ -106,44 +106,60 @@ sensor:
       unit_of_measurement: °C
       accuracy_decimals: 2  
     - name: "Piec zadana prędkość wentylatora"
-      unit_of_measurement: s
-      accuracy_decimals: 0  
+      unit_of_measurement: rpm
+      accuracy_decimals: 2  
+    
     - name: "Piec prędkość wentylatora"
-      unit_of_measurement: s
+      unit_of_measurement: rpm
+      accuracy_decimals: 2  
+
+    - name: "Piec prąd jonizacji"
+      unit_of_measurement: "μA"
+      accuracy_decimals: 1  
+    - name: "Piec wewnętrzna wartość zadana"
+      unit_of_measurement: "%"
       accuracy_decimals: 0  
-  
-    - name: "Piec ionisation_current"
-    - name: "Piec internal_setpoint"
     - name: "Piec available_power"
+      unit_of_measurement: "%"
+      accuracy_decimals: 0  
     - name: "Piec pump_percentage"
       unit_of_measurement: "%"
       accuracy_decimals: 0  
-  
+    
     - name: "Piec desired_max_power"
     - name: "Piec actual_power"
-  
+    
     - name: "Piec Mod.Controller Connected"
     - name: "Piec Heat demand from Mod.Controller"
     - name: "Piec Heat demand from on/off controller"
-    - name: "Piec Frost Protection"    
+    - name: "Piec Frost Protection"        
     - name: "Piec DHW Eco"
     - name: "Piec DHW Blocking"
     - name: "Piec Anti Legionella"
-    - name: "Piec DHW Heat Demand"    
-    
-    - name: "Piec hours_run_pump_sensor"
-    - name: "Piec hours_run_3way_sensor"
-    - name: "Piec hours_run_ch_sensor"
-    - name: "Piec hours_run_dhw_sensor"
-    
-    - name: "Piec power_supply_aval_hours_sensor"
-    - name: "Piec pump_starts_sensor"
-    - name: "Piec number_of3way_valce_cycles_sensor"
-    - name: "Piec burner_start_dhw_sensor"
-    - name: "Piec total_burner_start_sensor"
-    - name: "Piec failed_burner_start_sensor"
-    - name: "Piec number_flame_loss_sensor"
-    
+    - name: "Piec DHW Heat Demand"
+
+    - name: "Piec ilość godzin pracy pompy"
+      unit_of_measurement: h
+      accuracy_decimals: 0  
+    - name: "Piec ilość godzin pracy zaworu trójdrożnego"
+      unit_of_measurement: h
+      accuracy_decimals: 0  
+    - name: "Piec ilość godzin pracy"
+      unit_of_measurement: h
+      accuracy_decimals: 0  
+    - name: "Piec ilość godzin pracy c.w.u."
+      unit_of_measurement: h
+      accuracy_decimals: 0  
+    - name: "Piec ilość godzin zasilania"
+      unit_of_measurement: h
+      accuracy_decimals: 0  
+      
+    - name: "Piec ilość startów pompy"
+    - name: "Piec ilość trójdrożnych cykli zaworu"
+    - name: "Piec ilość startów c.w.u."
+    - name: "Piec ilość startów palnika"
+    - name: "Piec ilość nieudanych startów palnika"
+    - name: "Piec ilość awarii płomienia"
     
   - platform: wifi_signal
     name: "Piec WiFi Signal"

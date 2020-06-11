@@ -36,8 +36,35 @@ class Dietrich : public PollingComponent, public UARTDevice {
   Sensor *demand_source_bit6_sensor = new Sensor(); //BIT6=Anti Legionella
   Sensor *demand_source_bit7_sensor = new Sensor(); //BIT7=DHW Heat Demand  
     
+  Sensor *input_bit0_sensor = new Sensor(); //BIT0=Shudown Input, 
+	Sensor *input_bit1_sensor = new Sensor(); //BIT1=Release Input, 
+	Sensor *input_bit2_sensor = new Sensor(); //BIT2=Ionisation, 
+	Sensor *input_bit3_sensor = new Sensor(); //BIT3=Flow Switch detecting DHW, 
+	Sensor *input_bit5_sensor = new Sensor(); //BIT5=Min Gas Pressure, 
+	Sensor *input_bit6_sensor = new Sensor(); //BIT6=CH Enable, 
+	Sensor *input_bit7_sensor = new Sensor(); //BIT7=DHW Enable
+
+  Sensor *valve_bit0_sensor = new Sensor(); //BIT0=Gas Valve, 
+  Sensor *valve_bit2_sensor = new Sensor(); //BIT2=Ignition, 
+  Sensor *valve_bit3_sensor = new Sensor(); //BIT3=3-Way valve position, 
+  Sensor *valve_bit4_sensor = new Sensor(); //BIT4=Ext.3-Way Valve, 
+  Sensor *valve_bit6_sensor = new Sensor(); //BIT6=Ext. Gas Valve
+
+  Sensor *pump_bit0_sensor = new Sensor(); //BIT0=Pump, 
+  Sensor *pump_bit1_sensor = new Sensor(); //BIT1=Calorifier Pump, 
+  Sensor *pump_bit2_sensor = new Sensor(); //BIT2=Ext.CH Pump, 
+  Sensor *pump_bit4_sensor = new Sensor(); //BIT4=Status Report, 
+  Sensor *pump_bit7_sensor = new Sensor(); //BIT7=Opentherm SmartPower
+        
   Sensor *state_sensor = new Sensor();
+  Sensor *lockout_sensor = new Sensor();
+  Sensor *blocking_sensor = new Sensor();
   Sensor *sub_state_sensor = new Sensor();
+
+  Sensor *hydro_pressure_sensor = new Sensor();
+  Sensor *hru_sensor = new Sensor();
+  Sensor *control_temp_sensor = new Sensor();
+  Sensor *dhw_flowrate_sensor = new Sensor();
   
   //counter data sensors 1
   
@@ -76,6 +103,13 @@ class Dietrich : public PollingComponent, public UARTDevice {
     }
     buffer[len*2] = '\0';
   }
+  
+  float signedFloat(float avalue) {
+	  float f = avalue;
+    if (f>32768) f = f-65536;
+    return f;
+  }
+  
 
   void getSample() {
     byte readdata[80];
@@ -94,147 +128,72 @@ class Dietrich : public PollingComponent, public UARTDevice {
         
     if (readdata[0]==2 && readdata[1]==1 && readdata[2]==254) {//add crc check
     
-        float temp = 0.0;
         int bits = 0;
         
-        temp = (readdata[8]*256)+readdata[7];
-        if (temp>32768) temp = temp-65536;
-        flow_temp_sensor->publish_state(temp*0.01);
-
-        delay(100); //delay for esphome to not disconnect api
-        
-        temp = (readdata[10]*256)+readdata[9];
-        if (temp>32768) temp = temp-65536;
-        return_temp_sensor->publish_state(temp*0.01);
-
-        delay(100); //delay for esphome to not disconnect api
-        
-        temp = (readdata[12]*256)+readdata[11];
-        if (temp>32768) temp = temp-65536;
-        dhw_in_temp_sensor->publish_state(temp*0.01);
-        
-        delay(100); //delay for esphome to not disconnect api
+        flow_temp_sensor->publish_state(signedFloat((readdata[8]*256)+readdata[7])*0.01); delay(100); //delay for esphome to not disconnect api        
+        return_temp_sensor->publish_state(signedFloat((readdata[10]*256)+readdata[9])*0.01); delay(100); //delay for esphome to not disconnect api        
+        dhw_in_temp_sensor->publish_state(signedFloat((readdata[12]*256)+readdata[11])*0.01); delay(100); //delay for esphome to not disconnect api
+        outside_temp_sensor->publish_state(signedFloat((readdata[14]*256)+readdata[13])*0.01); delay(100); //delay for esphome to not disconnect api
+        calorifier_temp_sensor->publish_state(signedFloat((readdata[16]*256)+readdata[15])*0.01); delay(100); //delay for esphome to not disconnect api
+        boiler_control_temp_sensor->publish_state(signedFloat((readdata[20]*256)+readdata[19])*0.01); delay(100); //delay for esphome to not disconnect api
+        room_temp_sensor->publish_state(signedFloat((readdata[22]*256)+readdata[21])*0.01); delay(100); //delay for esphome to not disconnect api
+        ch_setpoint_sensor->publish_state(signedFloat((readdata[24]*256)+readdata[23])*0.01); delay(100); //delay for esphome to not disconnect api
+        dhw_setpoint_sensor->publish_state(signedFloat((readdata[26]*256)+readdata[25])*0.01); delay(100); //delay for esphome to not disconnect api
+        room_temp_setpoint_sensor->publish_state(signedFloat((readdata[28]*256)+readdata[27])*0.01); delay(100); //delay for esphome to not disconnect api
+        fan_speed_setpoint_sensor->publish_state(signedFloat((readdata[30]*256)+readdata[29])); delay(100); //delay for esphome to not disconnect api
+        fan_speed_sensor->publish_state(signedFloat((readdata[32]*256)+readdata[31])); delay(100); //delay for esphome to not disconnect api        
+        ionisation_current_sensor->publish_state(readdata[33]); delay(100); //delay for esphome to not disconnect api
+        internal_setpoint_sensor->publish_state(signedFloat((readdata[35]*256)+readdata[34])*0.01); delay(100); //delay for esphome to not disconnect api
+        available_power_sensor->publish_state(readdata[36]); delay(100); //delay for esphome to not disconnect api
+        pump_percentage_sensor->publish_state(readdata[37]); delay(100); //delay for esphome to not disconnect api
+        desired_max_power_sensor->publish_state(readdata[39]); delay(100); //delay for esphome to not disconnect api
+        actual_power_sensor->publish_state(readdata[40]); delay(100); //delay for esphome to not disconnect api
                 
-        temp = (readdata[14]*256)+readdata[13];
-        if (temp>32768) temp = temp-65536;
-        outside_temp_sensor->publish_state(temp*0.01);
-
-        delay(100); //delay for esphome to not disconnect api
-        
-        temp = (readdata[16]*256)+readdata[15];
-        if (temp>32768) temp = temp-65536;
-        calorifier_temp_sensor->publish_state(temp*0.01);
-        
-        delay(100); //delay for esphome to not disconnect api
-        
-        temp = (readdata[20]*256)+readdata[19];
-        if (temp>32768) temp = temp-65536;
-        boiler_control_temp_sensor->publish_state(temp*0.01);
-
-        delay(100); //delay for esphome to not disconnect api
-        
-        temp = (readdata[22]*256)+readdata[21];
-        if (temp>32768) temp = temp-65536;
-        room_temp_sensor->publish_state(temp*0.01);
-
-        delay(100); //delay for esphome to not disconnect api
-        
-        temp = (readdata[24]*256)+readdata[23];
-        if (temp>32768) temp = temp-65536;
-        ch_setpoint_sensor->publish_state(temp*0.01);
-
-        delay(100); //delay for esphome to not disconnect api
-        
-        temp = (readdata[26]*256)+readdata[25];
-        if (temp>32768) temp = temp-65536;
-        dhw_setpoint_sensor->publish_state(temp*0.01);
-
-        delay(100); //delay for esphome to not disconnect api
-        
-        temp = (readdata[28]*256)+readdata[27];
-        if (temp>32768) temp = temp-65536;
-        room_temp_setpoint_sensor->publish_state(temp*0.01);
-
-        delay(100); //delay for esphome to not disconnect api
-                
-        temp = (readdata[30]*256)+readdata[29];
-        if (temp>32768) temp = temp-65536;
-        fan_speed_setpoint_sensor->publish_state(temp*0.01);
-
-        delay(100); //delay for esphome to not disconnect api
-        
-        temp = (readdata[32]*256)+readdata[31];
-        if (temp>32768) temp = temp-65536;
-        fan_speed_sensor->publish_state(temp*0.01);
-        
-        delay(100); //delay for esphome to not disconnect api
-        
-        ionisation_current_sensor->publish_state(readdata[33]);
-
-        delay(100); //delay for esphome to not disconnect api
-        
-        temp = (readdata[35]*256)+readdata[33];
-        if (temp>32768) temp = temp-65536;
-        internal_setpoint_sensor->publish_state(temp*0.01);
-
-        delay(100); //delay for esphome to not disconnect api
-
-        available_power_sensor->publish_state(readdata[36]);
-
-        delay(100); //delay for esphome to not disconnect api
-
-        pump_percentage_sensor->publish_state(readdata[37]);
-
-        delay(100); //delay for esphome to not disconnect api
-        
-        desired_max_power_sensor->publish_state(readdata[39]);
-
-        delay(100); //delay for esphome to not disconnect api
-
-        actual_power_sensor->publish_state(readdata[40]);          
-        
-        delay(200); //delay for esphome to not disconnect api
-        
         bits = readdata[43];
+        demand_source_bit0_sensor->publish_state(bitRead(bits, 0)); delay(100); //delay for esphome to not disconnect api
+        demand_source_bit1_sensor->publish_state(bitRead(bits, 1)); delay(100); //delay for esphome to not disconnect api
+        demand_source_bit2_sensor->publish_state(bitRead(bits, 2)); delay(100); //delay for esphome to not disconnect api
+        demand_source_bit3_sensor->publish_state(bitRead(bits, 3)); delay(100); //delay for esphome to not disconnect api
+        demand_source_bit4_sensor->publish_state(bitRead(bits, 4)); delay(100); //delay for esphome to not disconnect api
+        demand_source_bit5_sensor->publish_state(bitRead(bits, 5)); delay(100); //delay for esphome to not disconnect api
+        demand_source_bit6_sensor->publish_state(bitRead(bits, 6)); delay(100); //delay for esphome to not disconnect api
+        demand_source_bit7_sensor->publish_state(bitRead(bits, 7)); delay(100); //delay for esphome to not disconnect api
         
-        demand_source_bit0_sensor->publish_state(bitRead(bits, 0));
+        bits = readdata[44];        
+        input_bit0_sensor->publish_state(bitRead(bits, 0)); delay(100); //delay for esphome to not disconnect api
+        input_bit1_sensor->publish_state(bitRead(bits, 1)); delay(100); //delay for esphome to not disconnect api
+        input_bit2_sensor->publish_state(bitRead(bits, 2)); delay(100); //delay for esphome to not disconnect api
+        input_bit3_sensor->publish_state(bitRead(bits, 3)); delay(100); //delay for esphome to not disconnect api
+        input_bit5_sensor->publish_state(bitRead(bits, 5)); delay(100); //delay for esphome to not disconnect api
+        input_bit6_sensor->publish_state(bitRead(bits, 6)); delay(100); //delay for esphome to not disconnect api
+        input_bit7_sensor->publish_state(bitRead(bits, 7)); delay(100); //delay for esphome to not disconnect api
 
-        delay(100); //delay for esphome to not disconnect api
-
-        demand_source_bit1_sensor->publish_state(bitRead(bits, 1));        
-
-        delay(100); //delay for esphome to not disconnect api
-
-        demand_source_bit2_sensor->publish_state(bitRead(bits, 2));  		
-
-        delay(100); //delay for esphome to not disconnect api
-
-        demand_source_bit3_sensor->publish_state(bitRead(bits, 3));        
-
-        delay(100); //delay for esphome to not disconnect api
-
-        demand_source_bit4_sensor->publish_state(bitRead(bits, 4));
-
-        delay(100); //delay for esphome to not disconnect api
-
-        demand_source_bit5_sensor->publish_state(bitRead(bits, 5));
-
-        delay(100); //delay for esphome to not disconnect api
-
-        demand_source_bit6_sensor->publish_state(bitRead(bits, 6));
-
-        delay(100); //delay for esphome to not disconnect api
-
-        demand_source_bit7_sensor->publish_state(bitRead(bits, 7));                                
-  
-        delay(100); //delay for esphome to not disconnect api
+        bits = readdata[45];        
+        valve_bit0_sensor->publish_state(bitRead(bits, 0)); delay(100); //delay for esphome to not disconnect api
+        valve_bit2_sensor->publish_state(bitRead(bits, 2)); delay(100); //delay for esphome to not disconnect api
+        valve_bit3_sensor->publish_state(bitRead(bits, 3)); delay(100); //delay for esphome to not disconnect api
+        valve_bit4_sensor->publish_state(bitRead(bits, 4)); delay(100); //delay for esphome to not disconnect api
+        valve_bit6_sensor->publish_state(bitRead(bits, 6)); delay(100); //delay for esphome to not disconnect api
         
-        state_sensor->publish_state(readdata[47]);
+        bits = readdata[46];        
+        pump_bit0_sensor->publish_state(bitRead(bits, 0)); delay(100); //delay for esphome to not disconnect api
+        pump_bit1_sensor->publish_state(bitRead(bits, 1)); delay(100); //delay for esphome to not disconnect api
+        pump_bit2_sensor->publish_state(bitRead(bits, 2)); delay(100); //delay for esphome to not disconnect api
+        pump_bit4_sensor->publish_state(bitRead(bits, 4)); delay(100); //delay for esphome to not disconnect api
+        pump_bit7_sensor->publish_state(bitRead(bits, 7)); delay(100); //delay for esphome to not disconnect api
 
-        delay(100); //delay for esphome to not disconnect api
+        state_sensor->publish_state(readdata[47]); delay(100); //delay for esphome to not disconnect api
+        lockout_sensor->publish_state(readdata[48]); delay(100); //delay for esphome to not disconnect api
+        blocking_sensor->publish_state(readdata[49]); delay(100); //delay for esphome to not disconnect api
+        sub_state_sensor->publish_state(readdata[50]); delay(100); //delay for esphome to not disconnect api
 
-        sub_state_sensor->publish_state(readdata[50]);
-                
+        hydro_pressure_sensor->publish_state(readdata[56]); delay(100); //delay for esphome to not disconnect api
+        bits = readdata[57];
+        hru_sensor->publish_state(bitRead(bits, 1)); delay(100); //delay for esphome to not disconnect api
+        
+        control_temp_sensor->publish_state(signedFloat((readdata[59]*256)+readdata[58])*0.01); delay(100); //delay for esphome to not disconnect api
+        dhw_flowrate_sensor->publish_state(signedFloat((readdata[61]*256)+readdata[60])*0.01); delay(100); //delay for esphome to not disconnect api
+                        
     }
     else {
         ESP_LOGD("custom", "crc error");
@@ -274,7 +233,7 @@ class Dietrich : public PollingComponent, public UARTDevice {
 
 			delay(100); //delay for esphome to not disconnect api
 
-      hours_run_dhw_sensor->publish_state(((readdata[13]*256)+readdata[14])*2);
+      hours_run_dhw_sensor->publish_state(((readdata[13]*256)+readdata[14]));
 
       power_supply_aval_hours_sensor->publish_state(((readdata[15]*256)+readdata[16])*2);
 
