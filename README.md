@@ -22,10 +22,10 @@ Caple is simple phone cord, cut and added pin connector to it.
 
 Screenshot of board connected to boiler.
 
-![Screenshot](board.png)
+![Screenshot](board.jpg)
 
 And in printed box.
 
-![Screenshot](box.png)
+![Screenshot](box.jpg)
 
 Thanks to great work from https://github.com/bernie-gitmans/remeha - for creating maping of data in excel file.
