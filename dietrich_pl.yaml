@@ -32,13 +32,16 @@ text_sensor:
   - platform: template
     id: piec_status_txt
     name: "Piec Status"
+  - platform: template
+    id: piec_podstatus_txt
+    name: "Piec Podstatus"
 
 sensor:
   - platform: custom
     lambda: |-
       auto dietrich = new Dietrich(id(uart_bus));
       App.register_component(dietrich);
-      return {dietrich->state_sensor, dietrich->sub_state_sensor, 
+      return {dietrich->state_sensor, dietrich->sub_state_sensor, dietrich->lockout_sensor, dietrich->blocking_sensor, 
         dietrich->flow_temp_sensor, dietrich->return_temp_sensor, dietrich->outside_temp_sensor, dietrich->calorifier_temp_sensor, 
         dietrich->boiler_control_temp_sensor, dietrich->room_temp_sensor, dietrich->ch_setpoint_sensor, dietrich->dhw_setpoint_sensor, dietrich->room_temp_setpoint_sensor,
         dietrich->fan_speed_setpoint_sensor, dietrich->fan_speed_sensor,                  
@@ -48,7 +51,8 @@ sensor:
         dietrich->demand_source_bit4_sensor, dietrich->demand_source_bit5_sensor, dietrich->demand_source_bit6_sensor, dietrich->demand_source_bit7_sensor,      
         dietrich->hours_run_pump_sensor, dietrich->hours_run_3way_sensor, dietrich->hours_run_ch_sensor, dietrich->hours_run_dhw_sensor,
         dietrich->power_supply_aval_hours_sensor, dietrich->pump_starts_sensor, dietrich->number_of3way_valce_cycles_sensor, dietrich->burner_start_dhw_sensor,
-        dietrich->total_burner_start_sensor, dietrich->failed_burner_start_sensor, dietrich->number_flame_loss_sensor,       
+        dietrich->total_burner_start_sensor, dietrich->failed_burner_start_sensor, dietrich->number_flame_loss_sensor,      
+        dietrich->hydro_pressure_sensor, dietrich->control_temp_sensor, dietrich->dhw_flowrate_sensor 
       };
 
     sensors:
@@ -77,7 +81,62 @@ sensor:
               else 
                 {id(piec_status_txt).publish_state("999:Unknown");}
 
-    - name: "Piec Podstatus"
+    - id: piec_podstatus
+      on_value:
+        then:
+          - lambda: |-
+              if (id(piec_podstatus).state==0) {id(piec_podstatus_txt).publish_state("0:Czuwanie");} //Standby
+              else if (id(piec_podstatus).state==1) {id(piec_podstatus_txt).publish_state("1:Anti-cycling");}
+              else if (id(piec_podstatus).state==2) {id(piec_podstatus_txt).publish_state("2:Open hydraulic valve");}
+              else if (id(piec_podstatus).state==3) {id(piec_podstatus_txt).publish_state("3:Pump start");}
+              else if (id(piec_podstatus).state==4) {id(piec_podstatus_txt).publish_state("4:Wait for burner start");}
+              else if (id(piec_podstatus).state==5) {id(piec_podstatus_txt).publish_state("5:-");}
+              else if (id(piec_podstatus).state==6) {id(piec_podstatus_txt).publish_state("6:-");}
+              else if (id(piec_podstatus).state==7) {id(piec_podstatus_txt).publish_state("7:-");}
+              else if (id(piec_podstatus).state==8) {id(piec_podstatus_txt).publish_state("8:-");}
+              else if (id(piec_podstatus).state==9) {id(piec_podstatus_txt).publish_state("9:-");}
+              else if (id(piec_podstatus).state==10) {id(piec_podstatus_txt).publish_state("10:Open external gas valve");}
+              else if (id(piec_podstatus).state==11) {id(piec_podstatus_txt).publish_state("11:Fan to fluegasvalve speed");}
+              else if (id(piec_podstatus).state==12) {id(piec_podstatus_txt).publish_state("12:Open fluegasvalve");}
+              else if (id(piec_podstatus).state==13) {id(piec_podstatus_txt).publish_state("13:Pre-purge");}
+              else if (id(piec_podstatus).state==14) {id(piec_podstatus_txt).publish_state("14:Wait for release");}
+              else if (id(piec_podstatus).state==15) {id(piec_podstatus_txt).publish_state("15:Burner start");}
+              else if (id(piec_podstatus).state==16) {id(piec_podstatus_txt).publish_state("16:VPS test");}
+              else if (id(piec_podstatus).state==17) {id(piec_podstatus_txt).publish_state("17:Pre-ignition");}
+              else if (id(piec_podstatus).state==18) {id(piec_podstatus_txt).publish_state("18:Ignition");}
+              else if (id(piec_podstatus).state==19) {id(piec_podstatus_txt).publish_state("19:Flame check");}
+              else if (id(piec_podstatus).state==20) {id(piec_podstatus_txt).publish_state("20:Interpurge");}
+              else if (id(piec_podstatus).state==30) {id(piec_podstatus_txt).publish_state("30:Normal internal setpoint");}
+              else if (id(piec_podstatus).state==31) {id(piec_podstatus_txt).publish_state("31:Limited internal setpoint");}
+              else if (id(piec_podstatus).state==32) {id(piec_podstatus_txt).publish_state("32:Normal power control");}
+              else if (id(piec_podstatus).state==33) {id(piec_podstatus_txt).publish_state("33:Gradient control level 1");}
+              else if (id(piec_podstatus).state==34) {id(piec_podstatus_txt).publish_state("34:Gradient control level 2");}
+              else if (id(piec_podstatus).state==35) {id(piec_podstatus_txt).publish_state("35:Gradient control level 3");}
+              else if (id(piec_podstatus).state==36) {id(piec_podstatus_txt).publish_state("36:Flame protection");}
+              else if (id(piec_podstatus).state==37) {id(piec_podstatus_txt).publish_state("37:Stabilisation time");}
+              else if (id(piec_podstatus).state==38) {id(piec_podstatus_txt).publish_state("38:Cold start");}
+              else if (id(piec_podstatus).state==39) {id(piec_podstatus_txt).publish_state("39:Limited power Tfg");}
+              else if (id(piec_podstatus).state==40) {id(piec_podstatus_txt).publish_state("40:Burner stop");}
+              else if (id(piec_podstatus).state==41) {id(piec_podstatus_txt).publish_state("41:Post purge");}
+              else if (id(piec_podstatus).state==42) {id(piec_podstatus_txt).publish_state("42:Fan to flue gas valve speed");}
+              else if (id(piec_podstatus).state==43) {id(piec_podstatus_txt).publish_state("43:Close flue gas valve");}
+              else if (id(piec_podstatus).state==44) {id(piec_podstatus_txt).publish_state("44:Stop fan");}
+              else if (id(piec_podstatus).state==45) {id(piec_podstatus_txt).publish_state("45:Close external gas valve");}
+              else if (id(piec_podstatus).state==46) {id(piec_podstatus_txt).publish_state("46:-");}
+              else if (id(piec_podstatus).state==47) {id(piec_podstatus_txt).publish_state("47:-");}
+              else if (id(piec_podstatus).state==48) {id(piec_podstatus_txt).publish_state("48:-");}
+              else if (id(piec_podstatus).state==49) {id(piec_podstatus_txt).publish_state("49:-");}
+              else if (id(piec_podstatus).state==39) {id(piec_podstatus_txt).publish_state("39:Heat exchanger protection");}
+              else if (id(piec_podstatus).state==60) {id(piec_podstatus_txt).publish_state("60:Pump post running");}
+              else if (id(piec_podstatus).state==61) {id(piec_podstatus_txt).publish_state("61:Pump stop");}
+              else if (id(piec_podstatus).state==62) {id(piec_podstatus_txt).publish_state("62:Close hydraulic valve");}
+              else if (id(piec_podstatus).state==63) {id(piec_podstatus_txt).publish_state("63:Start anti-cycle timer");}
+              else if (id(piec_podstatus).state==255) {id(piec_podstatus_txt).publish_state("255:Reset wait time");}
+              else if (id(piec_podstatus).state==999) {id(piec_podstatus_txt).publish_state("999:Unkown Sub-State");}
+        
+    - name: "Piec lockout"
+    - name: "Piec blocking"
+        
     - name: "Piec temp. przepływu"
       unit_of_measurement: °C
       accuracy_decimals: 2
@@ -127,8 +186,12 @@ sensor:
       accuracy_decimals: 0  
     
     - name: "Piec desired_max_power"
+      unit_of_measurement: "%"
+      accuracy_decimals: 0  
     - name: "Piec actual_power"
-    
+      unit_of_measurement: "%"
+      accuracy_decimals: 0      
+      
     - name: "Piec Mod.Controller Connected"
     - name: "Piec Heat demand from Mod.Controller"
     - name: "Piec Heat demand from on/off controller"
@@ -155,12 +218,34 @@ sensor:
       accuracy_decimals: 0  
       
     - name: "Piec ilość startów pompy"
+      unit_of_measurement: il
+      accuracy_decimals: 0
     - name: "Piec ilość trójdrożnych cykli zaworu"
+      unit_of_measurement: il
+      accuracy_decimals: 0
     - name: "Piec ilość startów c.w.u."
+      unit_of_measurement: il
+      accuracy_decimals: 0
     - name: "Piec ilość startów palnika"
+      unit_of_measurement: il
+      accuracy_decimals: 0
     - name: "Piec ilość nieudanych startów palnika"
+      unit_of_measurement: il
+      accuracy_decimals: 0
     - name: "Piec ilość awarii płomienia"
+      unit_of_measurement: il
+      accuracy_decimals: 0
     
+    - name: "Piec Ciśnienie wody"
+      unit_of_measurement: bar
+      accuracy_decimals: 2 
+    - name: "Piec kontrola temp."
+      unit_of_measurement: °C
+      accuracy_decimals: 2 
+    - name: "Piec natężenie przepływu C.W.U."
+      unit_of_measurement: l/m
+      accuracy_decimals: 0
+          
   - platform: wifi_signal
     name: "Piec WiFi Signal"
     update_interval: 60s

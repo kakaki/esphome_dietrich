@@ -185,10 +185,10 @@ class Dietrich : public PollingComponent, public UARTDevice {
 					if (pump_bit7_sensor->get_name().length()>0) pump_bit7_sensor->publish_state(bitRead(bits, 7)); delay(100); //delay for esphome to not disconnect api
         }
 
-        state_sensor->publish_state(readdata[47]); delay(100); //delay for esphome to not disconnect api
-        lockout_sensor->publish_state(readdata[48]); delay(100); //delay for esphome to not disconnect api
-        blocking_sensor->publish_state(readdata[49]); delay(100); //delay for esphome to not disconnect api
-        sub_state_sensor->publish_state(readdata[50]); delay(100); //delay for esphome to not disconnect api
+        state_sensor->publish_state(readdata[47]); delay(200); //delay for esphome to not disconnect api
+        lockout_sensor->publish_state(readdata[48]); delay(200); //delay for esphome to not disconnect api
+        blocking_sensor->publish_state(readdata[49]); delay(200); //delay for esphome to not disconnect api
+        sub_state_sensor->publish_state(readdata[50]); delay(200); //delay for esphome to not disconnect api
 
 			  if (hydro_pressure_sensor->get_name().length()>0) hydro_pressure_sensor->publish_state(readdata[56]); delay(100); //delay for esphome to not disconnect api
 			  
@@ -225,34 +225,14 @@ class Dietrich : public PollingComponent, public UARTDevice {
     
     if (readdata[0]==2 && readdata[1]==0 && readdata[2]==254) {//add crc check
     
-      hours_run_pump_sensor->publish_state(((readdata[7]*256)+readdata[8])*2);
-      
-			delay(100); //delay for esphome to not disconnect api
-      
-      hours_run_3way_sensor->publish_state(((readdata[9]*256)+readdata[10])*2);      
-
-			delay(100); //delay for esphome to not disconnect api
-
-      hours_run_ch_sensor->publish_state(((readdata[11]*256)+readdata[12])*2);
-
-			delay(100); //delay for esphome to not disconnect api
-
-      hours_run_dhw_sensor->publish_state(((readdata[13]*256)+readdata[14]));
-
-      power_supply_aval_hours_sensor->publish_state(((readdata[15]*256)+readdata[16])*2);
-
-			delay(100); //delay for esphome to not disconnect api
-
-      pump_starts_sensor->publish_state(((readdata[17]*256)+readdata[18])*8);
-
-			delay(100); //delay for esphome to not disconnect api
-
-      number_of3way_valce_cycles_sensor->publish_state(((readdata[19]*256)+readdata[20])*8);
-
-			delay(100); //delay for esphome to not disconnect api
-
-      burner_start_dhw_sensor->publish_state(((readdata[21]*256)+readdata[22])*8);
-
+      if (hours_run_pump_sensor->get_name().length()>0) hours_run_pump_sensor->publish_state(((readdata[7]*256)+readdata[8])*2); delay(100); //delay for esphome to not disconnect api      
+      if (hours_run_3way_sensor->get_name().length()>0) hours_run_3way_sensor->publish_state(((readdata[9]*256)+readdata[10])*2); delay(100); //delay for esphome to not disconnect api
+      if (hours_run_ch_sensor->get_name().length()>0) hours_run_ch_sensor->publish_state(((readdata[11]*256)+readdata[12])*2); delay(100); //delay for esphome to not disconnect api
+      if (hours_run_dhw_sensor->get_name().length()>0) hours_run_dhw_sensor->publish_state(((readdata[13]*256)+readdata[14])); delay(100); //delay for esphome to not disconnect api
+      if (power_supply_aval_hours_sensor->get_name().length()>0) power_supply_aval_hours_sensor->publish_state(((readdata[15]*256)+readdata[16])*2); delay(100); //delay for esphome to not disconnect api
+      if (pump_starts_sensor->get_name().length()>0) pump_starts_sensor->publish_state(((readdata[17]*256)+readdata[18])*8); delay(100); //delay for esphome to not disconnect api
+      if (number_of3way_valce_cycles_sensor->get_name().length()>0) number_of3way_valce_cycles_sensor->publish_state(((readdata[19]*256)+readdata[20])*8); delay(100); //delay for esphome to not disconnect api
+      if (burner_start_dhw_sensor->get_name().length()>0) burner_start_dhw_sensor->publish_state(((readdata[21]*256)+readdata[22])*8); delay(100); //delay for esphome to not disconnect api
     }
     
     array_to_string(readdata, 28, str);
@@ -268,18 +248,10 @@ class Dietrich : public PollingComponent, public UARTDevice {
     }
 
     if (readdata[0]==2 && readdata[1]==0 && readdata[2]==254) {//add crc check
-      total_burner_start_sensor->publish_state(((readdata[7]*256)+readdata[8])*8);
-
-			delay(100); //delay for esphome to not disconnect api
-
-      failed_burner_start_sensor->publish_state(((readdata[9]*256)+readdata[10]));
-
-			delay(100); //delay for esphome to not disconnect api
-
-      number_flame_loss_sensor->publish_state(((readdata[11]*256)+readdata[12]));
-    
+      if (total_burner_start_sensor->get_name().length()>0) total_burner_start_sensor->publish_state(((readdata[7]*256)+readdata[8])*8); delay(100); //delay for esphome to not disconnect api
+      if (failed_burner_start_sensor->get_name().length()>0) failed_burner_start_sensor->publish_state(((readdata[9]*256)+readdata[10])); delay(100); //delay for esphome to not disconnect api
+      if (number_flame_loss_sensor->get_name().length()>0) number_flame_loss_sensor->publish_state(((readdata[11]*256)+readdata[12])); delay(100); //delay for esphome to not disconnect api    
 	}
-
     
     array_to_string(readdata, 28, str);
     ESP_LOGD("custom", "counter2 data: %s", str);
@@ -299,7 +271,6 @@ class Dietrich : public PollingComponent, public UARTDevice {
     counter_timer++;
         
     if (counter_timer>=12) {
-    	delay(100);
 			counter_timer=0;
 			getCounter();
     }

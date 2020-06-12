@@ -32,13 +32,17 @@ text_sensor:
   - platform: template
     id: dietrich_state_txt
     name: "Boiler state"
+  - platform: template
+    id: dietrich_substate_txt
+    name: "Boiler sub state"
 
 sensor:
   - platform: custom
     lambda: |-
       auto dietrich = new Dietrich(id(uart_bus));
       App.register_component(dietrich);
-      return {dietrich->state_sensor, dietrich->sub_state_sensor, dietrich->flow_temp_sensor, dietrich->return_temp_sensor, dietrich->outside_temp_sensor, dietrich->calorifier_temp_sensor, 
+      return {dietrich->state_sensor, dietrich->sub_state_sensor, dietrich->lockout_sensor, dietrich->blocking_sensor, 
+        dietrich->flow_temp_sensor, dietrich->return_temp_sensor, dietrich->outside_temp_sensor, dietrich->calorifier_temp_sensor, 
         dietrich->boiler_control_temp_sensor, dietrich->room_temp_sensor, dietrich->ch_setpoint_sensor, dietrich->dhw_setpoint_sensor, dietrich->room_temp_setpoint_sensor,
         dietrich->fan_speed_setpoint_sensor, dietrich->fan_speed_sensor,
         dietrich->ionisation_current_sensor, dietrich->internal_setpoint_sensor, dietrich->available_power_sensor, dietrich->pump_percentage_sensor,
@@ -48,7 +52,7 @@ sensor:
         dietrich->hours_run_pump_sensor, dietrich->hours_run_3way_sensor, dietrich->hours_run_ch_sensor, dietrich->hours_run_dhw_sensor,
         dietrich->power_supply_aval_hours_sensor, dietrich->pump_starts_sensor, dietrich->number_of3way_valce_cycles_sensor, dietrich->burner_start_dhw_sensor,
         dietrich->total_burner_start_sensor, dietrich->failed_burner_start_sensor, dietrich->number_flame_loss_sensor,                 
-       
+        dietrich->hydro_pressure_sensor, dietrich->control_temp_sensor, dietrich->dhw_flowrate_sensor 
       };
 
     sensors:
@@ -77,7 +81,64 @@ sensor:
               else 
                 {id(dietrich_state_txt).publish_state("999:Unknown");}
 
-    - name: "Boiler Podstatus"
+    - id: dietrich_substate
+      on_value:
+        then:
+          - lambda: |-
+              if (id(dietrich_substate).state==0) {id(dietrich_substate_txt).publish_state("0:Standby");}
+              else if (id(dietrich_substate).state==1) {id(dietrich_substate_txt).publish_state("1:Anti-cycling");}
+              else if (id(dietrich_substate).state==2) {id(dietrich_substate_txt).publish_state("2:Open hydraulic valve");}
+              else if (id(dietrich_substate).state==3) {id(dietrich_substate_txt).publish_state("3:Pump start");}
+              else if (id(dietrich_substate).state==4) {id(dietrich_substate_txt).publish_state("4:Wait for burner start");}
+              else if (id(dietrich_substate).state==5) {id(dietrich_substate_txt).publish_state("5:-");}
+              else if (id(dietrich_substate).state==6) {id(dietrich_substate_txt).publish_state("6:-");}
+              else if (id(dietrich_substate).state==7) {id(dietrich_substate_txt).publish_state("7:-");}
+              else if (id(dietrich_substate).state==8) {id(dietrich_substate_txt).publish_state("8:-");}
+              else if (id(dietrich_substate).state==9) {id(dietrich_substate_txt).publish_state("9:-");}
+              else if (id(dietrich_substate).state==10) {id(dietrich_substate_txt).publish_state("10:Open external gas valve");}
+              else if (id(dietrich_substate).state==11) {id(dietrich_substate_txt).publish_state("11:Fan to fluegasvalve speed");}
+              else if (id(dietrich_substate).state==12) {id(dietrich_substate_txt).publish_state("12:Open fluegasvalve");}
+              else if (id(dietrich_substate).state==13) {id(dietrich_substate_txt).publish_state("13:Pre-purge");}
+              else if (id(dietrich_substate).state==14) {id(dietrich_substate_txt).publish_state("14:Wait for release");}
+              else if (id(dietrich_substate).state==15) {id(dietrich_substate_txt).publish_state("15:Burner start");}
+              else if (id(dietrich_substate).state==16) {id(dietrich_substate_txt).publish_state("16:VPS test");}
+              else if (id(dietrich_substate).state==17) {id(dietrich_substate_txt).publish_state("17:Pre-ignition");}
+              else if (id(dietrich_substate).state==18) {id(dietrich_substate_txt).publish_state("18:Ignition");}
+              else if (id(dietrich_substate).state==19) {id(dietrich_substate_txt).publish_state("19:Flame check");}
+              else if (id(dietrich_substate).state==20) {id(dietrich_substate_txt).publish_state("20:Interpurge");}
+              else if (id(dietrich_substate).state==30) {id(dietrich_substate_txt).publish_state("30:Normal internal setpoint");}
+              else if (id(dietrich_substate).state==31) {id(dietrich_substate_txt).publish_state("31:Limited internal setpoint");}
+              else if (id(dietrich_substate).state==32) {id(dietrich_substate_txt).publish_state("32:Normal power control");}
+              else if (id(dietrich_substate).state==33) {id(dietrich_substate_txt).publish_state("33:Gradient control level 1");}
+              else if (id(dietrich_substate).state==34) {id(dietrich_substate_txt).publish_state("34:Gradient control level 2");}
+              else if (id(dietrich_substate).state==35) {id(dietrich_substate_txt).publish_state("35:Gradient control level 3");}
+              else if (id(dietrich_substate).state==36) {id(dietrich_substate_txt).publish_state("36:Flame protection");}
+              else if (id(dietrich_substate).state==37) {id(dietrich_substate_txt).publish_state("37:Stabilisation time");}
+              else if (id(dietrich_substate).state==38) {id(dietrich_substate_txt).publish_state("38:Cold start");}
+              else if (id(dietrich_substate).state==39) {id(dietrich_substate_txt).publish_state("39:Limited power Tfg");}
+              else if (id(dietrich_substate).state==40) {id(dietrich_substate_txt).publish_state("40:Burner stop");}
+              else if (id(dietrich_substate).state==41) {id(dietrich_substate_txt).publish_state("41:Post purge");}
+              else if (id(dietrich_substate).state==42) {id(dietrich_substate_txt).publish_state("42:Fan to flue gas valve speed");}
+              else if (id(dietrich_substate).state==43) {id(dietrich_substate_txt).publish_state("43:Close flue gas valve");}
+              else if (id(dietrich_substate).state==44) {id(dietrich_substate_txt).publish_state("44:Stop fan");}
+              else if (id(dietrich_substate).state==45) {id(dietrich_substate_txt).publish_state("45:Close external gas valve");}
+              else if (id(dietrich_substate).state==46) {id(dietrich_substate_txt).publish_state("46:-");}
+              else if (id(dietrich_substate).state==47) {id(dietrich_substate_txt).publish_state("47:-");}
+              else if (id(dietrich_substate).state==48) {id(dietrich_substate_txt).publish_state("48:-");}
+              else if (id(dietrich_substate).state==49) {id(dietrich_substate_txt).publish_state("49:-");}
+              else if (id(dietrich_substate).state==39) {id(dietrich_substate_txt).publish_state("39:Heat exchanger protection");}
+              else if (id(dietrich_substate).state==60) {id(dietrich_substate_txt).publish_state("60:Pump post running");}
+              else if (id(dietrich_substate).state==61) {id(dietrich_substate_txt).publish_state("61:Pump stop");}
+              else if (id(dietrich_substate).state==62) {id(dietrich_substate_txt).publish_state("62:Close hydraulic valve");}
+              else if (id(dietrich_substate).state==63) {id(dietrich_substate_txt).publish_state("63:Start anti-cycle timer");}
+              else if (id(dietrich_substate).state==255) {id(dietrich_substate_txt).publish_state("255:Reset wait time");}
+              else 
+                {id(dietrich_substate_txt).publish_state("999:Unkown Sub-State");}
+ 
+    - name: "Boiler lockout"
+    - name: "Boiler blocking"
+
+ 
     - name: "Boiler flow temp"
       unit_of_measurement: °C
       accuracy_decimals: 2
@@ -106,17 +167,32 @@ sensor:
       unit_of_measurement: °C
       accuracy_decimals: 2  
     - name: "Boiler setpoint fanspeed"
+      unit_of_measurement: rpm
+      accuracy_decimals: 2  
+    
     - name: "Boiler fanspeed"    
+      unit_of_measurement: rpm
+      accuracy_decimals: 2  
     
     - name: "Boiler ionisation_current"
+      unit_of_measurement: "μA"
+      accuracy_decimals: 1  
     - name: "Boiler internal_setpoint"
+      unit_of_measurement: "%"
+      accuracy_decimals: 0      
     - name: "Boiler available_power"
+      unit_of_measurement: "%"
+      accuracy_decimals: 0  
     - name: "Boiler pump_percentage"
       unit_of_measurement: "%"
       accuracy_decimals: 0  
   
     - name: "Boiler desired_max_power"
+      unit_of_measurement: "%"
+      accuracy_decimals: 0      
     - name: "Boiler actual_power"
+      unit_of_measurement: "%"
+      accuracy_decimals: 0  
   
     - name: "Boiler Mod.Controller Connected"
     - name: "Boiler Heat demand from Mod.Controller"
@@ -128,16 +204,46 @@ sensor:
     - name: "Boiler DHW Heat Demand"
     
     - name: "Boiler hours_run_pump_sensor"
+      unit_of_measurement: h
+      accuracy_decimals: 0      
     - name: "Boiler hours_run_3way_sensor"
+      unit_of_measurement: h
+      accuracy_decimals: 0  
     - name: "Boiler hours_run_ch_sensor"
+      unit_of_measurement: h
+      accuracy_decimals: 0  
     - name: "Boiler hours_run_dhw_sensor"
+      unit_of_measurement: h
+      accuracy_decimals: 0  
     - name: "Boiler power_supply_aval_hours_sensor"
+      unit_of_measurement: h
+      accuracy_decimals: 0  
     - name: "Boiler pump_starts_sensor"
+      unit_of_measurement: count
+      accuracy_decimals: 0    
     - name: "Boiler number_of3way_valce_cycles_sensor"
+      unit_of_measurement: count
+      accuracy_decimals: 0
     - name: "Boiler burner_start_dhw_sensor"
+      unit_of_measurement: count
+      accuracy_decimals: 0
     - name: "Boiler total_burner_start_sensor"
+      unit_of_measurement: count
+      accuracy_decimals: 0
     - name: "Boiler failed_burner_start_sensor"
+      unit_of_measurement: count
+      accuracy_decimals: 0
     - name: "Boiler number_flame_loss_sensor"    
+
+    - name: "Boiler hydro_pressure_sensor"
+      unit_of_measurement: bar
+      accuracy_decimals: 2 
+    - name: "Boiler control_temp_sensor"
+      unit_of_measurement: °C
+      accuracy_decimals: 2 
+    - name: "Boiler dhw_flowrate_sensor"
+      unit_of_measurement: l/m
+      accuracy_decimals: 0
     
   - platform: wifi_signal
     name: "Boiler WiFi Signal"
