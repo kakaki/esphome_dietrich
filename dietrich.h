@@ -84,7 +84,7 @@ class Dietrich : public PollingComponent, public UARTDevice {
 	Sensor *number_flame_loss_sensor = new Sensor();
 
   
-  Dietrich(UARTComponent *parent) : PollingComponent(10000), UARTDevice(parent) {}
+  Dietrich(UARTComponent *parent) : PollingComponent(15000), UARTDevice(parent) {}
   
   bool sem_reading_data = false;
   bool sem_read_all = true;
@@ -119,7 +119,7 @@ class Dietrich : public PollingComponent, public UARTDevice {
     //ESP_LOGD("custom", "read sample");
     
     write_array(sample,sizeof(sample));
-    delay(500);
+    delay(250);
  
     int n=0;
     while(available()) {
@@ -141,16 +141,18 @@ class Dietrich : public PollingComponent, public UARTDevice {
         if (ch_setpoint_sensor->get_name().length()>0) ch_setpoint_sensor->publish_state(signedFloat((readdata[24]*256)+readdata[23])*0.01); delay(100); //delay for esphome to not disconnect api
         if (dhw_setpoint_sensor->get_name().length()>0) dhw_setpoint_sensor->publish_state(signedFloat((readdata[26]*256)+readdata[25])*0.01); delay(100); //delay for esphome to not disconnect api
         if (room_temp_setpoint_sensor->get_name().length()>0) room_temp_setpoint_sensor->publish_state(signedFloat((readdata[28]*256)+readdata[27])*0.01); delay(100); //delay for esphome to not disconnect api
-        if (fan_speed_setpoint_sensor->get_name().length()>0) fan_speed_setpoint_sensor->publish_state(signedFloat((readdata[30]*256)+readdata[29])); delay(100); //delay for esphome to not disconnect api
-        if (fan_speed_sensor->get_name().length()>0) fan_speed_sensor->publish_state(signedFloat((readdata[32]*256)+readdata[31])); delay(100); //delay for esphome to not disconnect api        
-        if (ionisation_current_sensor->get_name().length()>0) ionisation_current_sensor->publish_state(readdata[33]); delay(100); //delay for esphome to not disconnect api
-        if (internal_setpoint_sensor->get_name().length()>0) internal_setpoint_sensor->publish_state(signedFloat((readdata[35]*256)+readdata[34])*0.01); delay(100); //delay for esphome to not disconnect api
-        if (available_power_sensor->get_name().length()>0) available_power_sensor->publish_state(readdata[36]); delay(100); //delay for esphome to not disconnect api
-        if (pump_percentage_sensor->get_name().length()>0) pump_percentage_sensor->publish_state(readdata[37]); delay(100); //delay for esphome to not disconnect api
-        if (desired_max_power_sensor->get_name().length()>0) desired_max_power_sensor->publish_state(readdata[39]); delay(100); //delay for esphome to not disconnect api
-        if (actual_power_sensor->get_name().length()>0) actual_power_sensor->publish_state(readdata[40]); delay(100); //delay for esphome to not disconnect api
         
         if (sem_read_all) {   
+
+					if (fan_speed_setpoint_sensor->get_name().length()>0) fan_speed_setpoint_sensor->publish_state(signedFloat((readdata[30]*256)+readdata[29])); delay(100); //delay for esphome to not disconnect api
+					if (fan_speed_sensor->get_name().length()>0) fan_speed_sensor->publish_state(signedFloat((readdata[32]*256)+readdata[31])); delay(100); //delay for esphome to not disconnect api        
+					if (ionisation_current_sensor->get_name().length()>0) ionisation_current_sensor->publish_state(readdata[33]); delay(100); //delay for esphome to not disconnect api
+					if (internal_setpoint_sensor->get_name().length()>0) internal_setpoint_sensor->publish_state(signedFloat((readdata[35]*256)+readdata[34])*0.01); delay(100); //delay for esphome to not disconnect api
+					if (available_power_sensor->get_name().length()>0) available_power_sensor->publish_state(readdata[36]); delay(100); //delay for esphome to not disconnect api
+					if (pump_percentage_sensor->get_name().length()>0) pump_percentage_sensor->publish_state(readdata[37]); delay(100); //delay for esphome to not disconnect api
+					if (desired_max_power_sensor->get_name().length()>0) desired_max_power_sensor->publish_state(readdata[39]); delay(100); //delay for esphome to not disconnect api
+					if (actual_power_sensor->get_name().length()>0) actual_power_sensor->publish_state(readdata[40]); delay(100); //delay for esphome to not disconnect api
+
 					bits = readdata[43];
 					if (demand_source_bit0_sensor->get_name().length()>0) demand_source_bit0_sensor->publish_state(bitRead(bits, 0)); delay(100); //delay for esphome to not disconnect api
 					if (demand_source_bit1_sensor->get_name().length()>0) demand_source_bit1_sensor->publish_state(bitRead(bits, 1)); delay(100); //delay for esphome to not disconnect api
@@ -190,13 +192,15 @@ class Dietrich : public PollingComponent, public UARTDevice {
         blocking_sensor->publish_state(readdata[49]); delay(200); //delay for esphome to not disconnect api
         sub_state_sensor->publish_state(readdata[50]); delay(200); //delay for esphome to not disconnect api
 
-			  if (hydro_pressure_sensor->get_name().length()>0) hydro_pressure_sensor->publish_state(readdata[56]); delay(100); //delay for esphome to not disconnect api
-			  
-        bits = readdata[57];
-        if (hru_sensor->get_name().length()>0) hru_sensor->publish_state(bitRead(bits, 1)); delay(100); //delay for esphome to not disconnect api
-        
-        if (control_temp_sensor->get_name().length()>0) control_temp_sensor->publish_state(signedFloat((readdata[59]*256)+readdata[58])*0.01); delay(100); //delay for esphome to not disconnect api
-        if (dhw_flowrate_sensor->get_name().length()>0) dhw_flowrate_sensor->publish_state(signedFloat((readdata[61]*256)+readdata[60])*0.01); delay(100); //delay for esphome to not disconnect api
+        if (sem_read_all) {   
+					if (hydro_pressure_sensor->get_name().length()>0) hydro_pressure_sensor->publish_state(readdata[56]); delay(100); //delay for esphome to not disconnect api
+				
+					bits = readdata[57];
+					if (hru_sensor->get_name().length()>0) hru_sensor->publish_state(bitRead(bits, 1)); delay(100); //delay for esphome to not disconnect api
+				
+					if (control_temp_sensor->get_name().length()>0) control_temp_sensor->publish_state(signedFloat((readdata[59]*256)+readdata[58])*0.01); delay(100); //delay for esphome to not disconnect api
+					if (dhw_flowrate_sensor->get_name().length()>0) dhw_flowrate_sensor->publish_state(signedFloat((readdata[61]*256)+readdata[60])*0.01); delay(100); //delay for esphome to not disconnect api
+        }
                        
         sem_read_all=!sem_read_all;
                         
@@ -215,7 +219,7 @@ class Dietrich : public PollingComponent, public UARTDevice {
     char str[28] = "";
         
     write_array(counter1,sizeof(counter1));
-    delay(500);
+    delay(150);
 
     int n=0;
     while(available()) {
@@ -239,7 +243,7 @@ class Dietrich : public PollingComponent, public UARTDevice {
     ESP_LOGD("custom", "counter1 data: %s", str);
     
     write_array(counter2,sizeof(counter2));
-    delay(500);
+    delay(150);
 
     n=0;
     while(available()) {
@@ -265,15 +269,16 @@ class Dietrich : public PollingComponent, public UARTDevice {
     if (sem_reading_data) return;
           
     sem_reading_data=true;
-    
-    getSample();
-    
-    counter_timer++;
         
-    if (counter_timer>=12) {
+    counter_timer++;
+
+    if (counter_timer>=8) {
 			counter_timer=0;
 			getCounter();
     }
+    else 
+      getSample();
+
     
     sem_reading_data=false;
     
