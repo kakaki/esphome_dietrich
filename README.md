@@ -18,7 +18,7 @@ RXD 2  ---          |        TX
 ```
 
 I have connected ESP to prototype board with pins, on board there was simple voltage divider (1kΩ / 2kΩ) to change power from 5V to 3V, but on my board it was not needed and i have connected pins directly to Dietich MCR33, .
-Caple is simple phone cord, cut and added pin connector to it.
+Cable is simple phone cord, cut and added pin connector to it.
 
 Screenshot of board connected to boiler.
 
