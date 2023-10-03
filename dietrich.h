@@ -89,6 +89,8 @@ class Dietrich : public PollingComponent, public UARTDevice {
   bool sem_reading_data = false;
   bool sem_read_all = true;
   int counter_timer = 99;
+  const int SAMPLE_READ_BUFFER_SIZE = 80;
+  const int COUNTER_READ_BUFFER_SIZE = 28;
 
   byte sample[10] =    {0x02, 0xFE, 0x01, 0x05, 0x08, 0x02, 0x01, 0x69, 0xAB, 0x03 };
   byte counter1[10] =  {0x02, 0xFE, 0x00, 0x05, 0x08, 0x10, 0x1C, 0x98, 0xC2, 0x03 };
@@ -110,24 +112,47 @@ class Dietrich : public PollingComponent, public UARTDevice {
     if (f>32768) f = f-65536;
     return f;
   }
-  
+
+  bool isValidCRC(byte response[], int n) {
+    if(n < 3) return false;
+
+    int expected_crc = (response[n - 3] & 0xFF) | ((response[n - 2] & 0xFF) << 8);
+
+    int calculated_crc = 0x0000ffff;
+    int poly = 0x0000a001;
+    int i, j;
+    for (i = 1; i < n - 3; i++) {
+        calculated_crc ^= ((int) response[i] & 0x000000ff);
+        for (j = 0; j < 8; j++) {
+            if ((calculated_crc & 0x00000001) != 0) {
+                calculated_crc >>= 1;
+                calculated_crc ^= poly;
+            } else {
+                calculated_crc >>= 1;
+            }
+        }
+    }
+
+    return expected_crc == calculated_crc;
+  }
 
   void getSample() {
-    byte readdata[80];
-    char str[161] = "";
-    
+
+    byte readdata[SAMPLE_READ_BUFFER_SIZE];
+    char str[SAMPLE_READ_BUFFER_SIZE * 2 + 1] = "";
+
     //ESP_LOGD("custom", "read sample");
     
     write_array(sample,sizeof(sample));
     delay(250);
  
     int n=0;
-    while(available()) {
+    while(available() && n < SAMPLE_READ_BUFFER_SIZE) {
       readdata[n] = read();
       n++;
     }
         
-    if (readdata[0]==2 && readdata[1]==1 && readdata[2]==254) {//add crc check
+    if (isValidCRC(readdata, n)) {
     
         int bits = 0;
         
@@ -215,19 +240,20 @@ class Dietrich : public PollingComponent, public UARTDevice {
   }
   
   void getCounter() {
-    byte readdata[28];
-    char str[57] = "";
-        
+
+    byte readdata[COUNTER_READ_BUFFER_SIZE];
+    char str[COUNTER_READ_BUFFER_SIZE * 2 + 1] = "";
+ 
     write_array(counter1,sizeof(counter1));
     delay(150);
 
     int n=0;
-    while(available()) {
+    while(available() && n < COUNTER_READ_BUFFER_SIZE) {
       readdata[n] = read();
       n++;
     }
     
-    if (readdata[0]==2 && readdata[1]==0 && readdata[2]==254) {//add crc check
+    if (isValidCRC(readdata, n)) {
     
       if (hours_run_pump_sensor->get_name().empty()==0) hours_run_pump_sensor->publish_state(((readdata[7]*256)+readdata[8])*2); delay(100); //delay for esphome to not disconnect api      
       if (hours_run_3way_sensor->get_name().empty()==0) hours_run_3way_sensor->publish_state(((readdata[9]*256)+readdata[10])*2); delay(100); //delay for esphome to not disconnect api
@@ -246,12 +272,13 @@ class Dietrich : public PollingComponent, public UARTDevice {
     delay(150);
 
     n=0;
-    while(available()) {
+    while(available() && n < COUNTER_READ_BUFFER_SIZE) {
       readdata[n] = read();
       n++;
     }
 
-    if (readdata[0]==2 && readdata[1]==0 && readdata[2]==254) {//add crc check
+    if (isValidCRC(readdata, n)) {
+
       if (total_burner_start_sensor->get_name().empty()==0) total_burner_start_sensor->publish_state(((readdata[7]*256)+readdata[8])*8); delay(100); //delay for esphome to not disconnect api
       if (failed_burner_start_sensor->get_name().empty()==0) failed_burner_start_sensor->publish_state(((readdata[9]*256)+readdata[10])); delay(100); //delay for esphome to not disconnect api
       if (number_flame_loss_sensor->get_name().empty()==0) number_flame_loss_sensor->publish_state(((readdata[11]*256)+readdata[12])); delay(100); //delay for esphome to not disconnect api    
