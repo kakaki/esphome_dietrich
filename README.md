@@ -37,6 +37,7 @@ Full examples:
 | [dietrich_calenta_v1_p5_en.yaml](dietrich_calenta_v1_p5_en.yaml) | ESP8266 | English | `calenta_v1_p5` |
 | [dietrich_calenta_v1_p5_pl.yaml](dietrich_calenta_v1_p5_pl.yaml) | ESP8266 | Polish | `calenta_v1_p5` |
 | [dietrich_esp32_en.yaml](dietrich_esp32_en.yaml) | ESP32 | English | `mcr3` (default) |
+| [dietrich_emc_m_en.yaml](dietrich_emc_m_en.yaml) | ESP8266 (GPIO4/GPIO5) | English | `mcr3`, De Dietrich EMC-M 24/28 MI |
 
 ### ESP32 notes
 
@@ -127,7 +128,7 @@ And in printed box.
 
 #### De Dietrich EMC-M 24/28 MI
 
-Recom shows this boiler's control board as `PCU-05 (P2)`. It answers the **`mcr3`** protocol and does not respond to `calenta_v1_p5`. **RX and TX are swapped compared with the MCR3 example:** the pin next to GND is the boiler's RX, not its TX. The ESP stays powered over USB, so the boiler is on GPIO4/GPIO5.
+Recom shows this boiler's control board as `PCU-05 (P2)`. It answers the **`mcr3`** protocol and does not respond to `calenta_v1_p5`. **RX and TX are swapped compared with the MCR3 example:** the pin next to GND is the boiler's RX, not its TX. The ESP stays powered over USB, so the boiler is on GPIO4/GPIO5. See [dietrich_emc_m_en.yaml](dietrich_emc_m_en.yaml).
 
 ![EMC-M RJ10 pinout](emc_m_rj10_pinout.png)
 
