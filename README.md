@@ -37,7 +37,7 @@ Full examples:
 | [dietrich_calenta_v1_p5_en.yaml](dietrich_calenta_v1_p5_en.yaml) | ESP8266 | English | `calenta_v1_p5` |
 | [dietrich_calenta_v1_p5_pl.yaml](dietrich_calenta_v1_p5_pl.yaml) | ESP8266 | Polish | `calenta_v1_p5` |
 | [dietrich_esp32_en.yaml](dietrich_esp32_en.yaml) | ESP32 | English | `mcr3` (default) |
-| [dietrich_emc_m_en.yaml](dietrich_emc_m_en.yaml) | ESP8266 (GPIO4/GPIO5) | English | `mcr3`, De Dietrich EMC-M 24/28 MI |
+| [dietrich_emc_m_en.yaml](dietrich_emc_m_en.yaml) | ESP8266 (GPIO2/GPIO14) | English | `mcr3`, De Dietrich EMC-M 24/28 MI |
 
 ### ESP32 notes
 
@@ -128,15 +128,15 @@ And in printed box.
 
 #### De Dietrich EMC-M 24/28 MI
 
-Recom shows this boiler's control board as `PCU-05 (P2)`. It answers the **`mcr3`** protocol and does not respond to `calenta_v1_p5`. **RX and TX are swapped compared with the MCR3 example:** the pin next to GND is the boiler's RX, not its TX. The ESP stays powered over USB, so the boiler is on GPIO4/GPIO5. See [dietrich_emc_m_en.yaml](dietrich_emc_m_en.yaml).
+Recom shows this boiler's control board as `PCU-05 (P2)`. It answers the **`mcr3`** protocol and does not respond to `calenta_v1_p5`. **RX and TX are swapped compared with the MCR3 example:** the pin next to GND is the boiler's RX, not its TX. The ESP stays powered over USB, so the boiler is on D4/D5 (GPIO2/GPIO14), which also leaves D1/D2/D6/D7 free for an OpenTherm gateway such as the DIYless one. See [dietrich_emc_m_en.yaml](dietrich_emc_m_en.yaml).
 
 ![EMC-M RJ10 pinout](emc_m_rj10_pinout.png)
 
 | Plug position (top → bottom in the photo) | Boiler signal | ESP8266 pin |
 | --- | --- | --- |
 | 1 | GND | GND |
-| 2 | RX | D2 / GPIO4 (`tx_pin`) |
-| 3 | TX | D1 / GPIO5 (`rx_pin`) |
+| 2 | RX | D4 / GPIO2 (`tx_pin`) |
+| 3 | TX | D5 / GPIO14 (`rx_pin`) |
 | 4 | 5V | not connected (ESP powered over USB) |
 
 ```yaml
@@ -145,12 +145,12 @@ logger:            # stays on USB, the boiler is not on GPIO1/GPIO3
 uart:
   id: uart_bus
   baud_rate: 9600
-  tx_pin: GPIO4    # D2 -> boiler RX
-  rx_pin: GPIO5    # D1 <- boiler TX
+  tx_pin: GPIO2    # D4 -> boiler RX
+  rx_pin: GPIO14   # D5 <- boiler TX
 
 dietrich:
   uart_id: uart_bus
-  update_interval: 15s
+  update_interval: 5s
   variant: mcr3
 ```
 
