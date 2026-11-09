@@ -80,12 +80,43 @@ bool Dietrich::frame_valid_(const uint8_t *response, size_t n) const {
   return is_valid_crc_(response, n);
 }
 
-size_t Dietrich::read_response_(uint8_t *buffer, size_t len) {
+// Drop any stale bytes (e.g. the tail of a reply that arrived too late), send
+// the request and collect the reply. Boilers differ a lot in how fast they
+// answer (the EMC-M / PCU-05 needs ~240 ms before the first byte), so instead
+// of a fixed delay we wait until a valid frame is complete, the line has been
+// quiet for a while after data started, or the overall timeout expires.
+size_t Dietrich::transact_(const uint8_t *request, size_t req_len, uint8_t *buffer, size_t len) {
+  static const uint32_t RESPONSE_TIMEOUT_MS = 1000;
+  static const uint32_t INTER_BYTE_GAP_MS = 50;
+
+  while (this->available())
+    this->read();
+
+  this->write_array(request, req_len);
+  this->flush();
+
   memset(buffer, 0, len);
   size_t n = 0;
-  while (this->available() && n < len) {
-    buffer[n] = this->read();
-    n++;
+  const uint32_t start = millis();
+  uint32_t last_rx = start;
+
+  while (millis() - start < RESPONSE_TIMEOUT_MS) {
+    bool got = false;
+    while (this->available() && n < len) {
+      buffer[n++] = this->read();
+      got = true;
+    }
+    if (got) {
+      last_rx = millis();
+      // mcr3 frames carry a CRC, so a valid one is known to be complete
+      if (this->variant_ == DIETRICH_VARIANT_MCR3 && buffer[n - 1] == 0x03 && this->frame_valid_(buffer, n))
+        break;
+    } else if (n > 0 && millis() - last_rx > INTER_BYTE_GAP_MS) {
+      break;  // reply finished
+    }
+    if (n >= len)
+      break;
+    delay(5);  // also yields to WiFi on ESP8266
   }
   return n;
 }
@@ -93,14 +124,12 @@ size_t Dietrich::read_response_(uint8_t *buffer, size_t len) {
 void Dietrich::get_sample_() {
   uint8_t readdata[80];
 
+  size_t n;
   if (this->variant_ == DIETRICH_VARIANT_CALENTA_V1_P5) {
-    this->write_array(CMD_SAMPLE_CALENTA, sizeof(CMD_SAMPLE_CALENTA));
+    n = this->transact_(CMD_SAMPLE_CALENTA, sizeof(CMD_SAMPLE_CALENTA), readdata, sizeof(readdata));
   } else {
-    this->write_array(CMD_SAMPLE_MCR3, sizeof(CMD_SAMPLE_MCR3));
+    n = this->transact_(CMD_SAMPLE_MCR3, sizeof(CMD_SAMPLE_MCR3), readdata, sizeof(readdata));
   }
-  delay(250);
-
-  size_t n = this->read_response_(readdata, sizeof(readdata));
   // calenta_v1_p5 sample data (up to sub_state) is shifted one byte towards the frame start
   const int o = this->variant_ == DIETRICH_VARIANT_CALENTA_V1_P5 ? -1 : 0;
 
@@ -178,25 +207,25 @@ void Dietrich::get_sample_() {
     }
 
     this->read_all_ = !this->read_all_;
+  } else if (n == 0) {
+    ESP_LOGW(TAG, "no response from boiler - check wiring (ESP TX -> boiler RXD, ESP RX <- boiler TXD, common GND)");
   } else {
-    ESP_LOGD(TAG, "crc error");
+    ESP_LOGW(TAG, "invalid response frame (%u bytes)", (unsigned) n);
   }
 
-  ESP_LOGD(TAG, "sample data: %s", hex_str_(readdata, sizeof(readdata)).c_str());
+  ESP_LOGD(TAG, "sample data (%u bytes): %s", (unsigned) n, hex_str_(readdata, n).c_str());
 }
 
 void Dietrich::get_counter_() {
   uint8_t readdata[28];
   const bool calenta = this->variant_ == DIETRICH_VARIANT_CALENTA_V1_P5;
 
+  size_t n;
   if (calenta) {
-    this->write_array(CMD_COUNTER1_CALENTA, sizeof(CMD_COUNTER1_CALENTA));
+    n = this->transact_(CMD_COUNTER1_CALENTA, sizeof(CMD_COUNTER1_CALENTA), readdata, sizeof(readdata));
   } else {
-    this->write_array(CMD_COUNTER1_MCR3, sizeof(CMD_COUNTER1_MCR3));
+    n = this->transact_(CMD_COUNTER1_MCR3, sizeof(CMD_COUNTER1_MCR3), readdata, sizeof(readdata));
   }
-  delay(150);
-
-  size_t n = this->read_response_(readdata, sizeof(readdata));
 
   if (this->frame_valid_(readdata, n)) {
     if (calenta) {
@@ -217,16 +246,13 @@ void Dietrich::get_counter_() {
     }
   }
 
-  ESP_LOGD(TAG, "counter1 data: %s", hex_str_(readdata, sizeof(readdata)).c_str());
+  ESP_LOGD(TAG, "counter1 data (%u bytes): %s", (unsigned) n, hex_str_(readdata, n).c_str());
 
   if (calenta) {
-    this->write_array(CMD_COUNTER2_CALENTA, sizeof(CMD_COUNTER2_CALENTA));
+    n = this->transact_(CMD_COUNTER2_CALENTA, sizeof(CMD_COUNTER2_CALENTA), readdata, sizeof(readdata));
   } else {
-    this->write_array(CMD_COUNTER2_MCR3, sizeof(CMD_COUNTER2_MCR3));
+    n = this->transact_(CMD_COUNTER2_MCR3, sizeof(CMD_COUNTER2_MCR3), readdata, sizeof(readdata));
   }
-  delay(150);
-
-  n = this->read_response_(readdata, sizeof(readdata));
 
   if (this->frame_valid_(readdata, n)) {
     if (calenta) {
@@ -243,7 +269,7 @@ void Dietrich::get_counter_() {
     }
   }
 
-  ESP_LOGD(TAG, "counter2 data: %s", hex_str_(readdata, sizeof(readdata)).c_str());
+  ESP_LOGD(TAG, "counter2 data (%u bytes): %s", (unsigned) n, hex_str_(readdata, n).c_str());
 }
 
 void Dietrich::update() {

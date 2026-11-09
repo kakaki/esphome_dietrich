@@ -104,7 +104,7 @@ class Dietrich : public PollingComponent, public uart::UARTDevice {
   // publish only if the sensor is configured; the short delay keeps the
   // API/WiFi stack fed so Home Assistant does not disconnect
   void publish_(sensor::Sensor *s, float value, uint32_t wait = 100);
-  size_t read_response_(uint8_t *buffer, size_t len);
+  size_t transact_(const uint8_t *request, size_t req_len, uint8_t *buffer, size_t len);
   bool frame_valid_(const uint8_t *response, size_t n) const;
   static bool is_valid_crc_(const uint8_t *response, size_t n);
   static float signed_float_(float value);
