@@ -1,4 +1,13 @@
 # De Dietrich EMC-M 24/28 MI (PCU-05 control board, reported by Recom as "PCU-05 (P2)")
+substitutions:
+  # Burner power is estimated from the fan speed, interpolated linearly between
+  # minimum and maximum heating power. Check these against the parameter table
+  # of your boiler manual.
+  ch_min_power_kw: "6"     # minimum heating power (kW) - ASSUMED, check manual
+  ch_max_power_kw: "24"    # maximum heating power (kW), EMC-M 24/28 MI
+  fan_min_rpm: "1180"      # fan speed at minimum power, observed in the logs
+  fan_max_rpm: "4800"      # fan speed at maximum CH power - ASSUMED, check manual
+
 esphome:
   name: dietrich-emc-m
 
@@ -151,8 +160,10 @@ dietrich:
     name: "Boiler blocking"
 
   flow_temp:
+    id: boiler_flow_temp
     name: "Boiler flow temp"
   return_temp:
+    id: boiler_return_temp
     name: "Boiler return temp"
   # no outside, calorifier, DHW-in or water pressure sensor on the EMC-M:
   # those fields only carry placeholder values, so they are left out
@@ -171,6 +182,7 @@ dietrich:
     name: "Boiler setpoint fanspeed"
     accuracy_decimals: 2
   fan_speed:
+    id: boiler_fan_speed
     name: "Boiler fanspeed"
     accuracy_decimals: 2
 
@@ -182,10 +194,12 @@ dietrich:
   available_power:
     name: "Boiler available_power"
   pump_percentage:
+    id: boiler_pump_percentage
     name: "Boiler pump_percentage"
   desired_max_power:
     name: "Boiler desired_max_power"
   actual_power:
+    id: boiler_actual_power
     name: "Boiler actual_power"
 
   demand_source_bit0:
@@ -204,6 +218,12 @@ dietrich:
     name: "Boiler Anti Legionella"
   demand_source_bit7:
     name: "Boiler DHW Heat Demand"
+  # Diverter (3-way) valve position as commanded by the boiler, and the DHW
+  # flow switch. Open a hot tap to see which value means "DHW".
+  valve_bit3:
+    name: "Boiler 3-way valve position"
+  input_bit3:
+    name: "Boiler DHW flow switch"
 
   hours_run_pump:
     name: "Boiler hours_run_pump_sensor"
@@ -239,6 +259,13 @@ dietrich:
   dhw_flowrate:
     name: "Boiler dhw_flowrate_sensor"
 
+globals:
+  # burner power of the last burn, used by the radiator heat estimate
+  - id: last_burn_kw
+    type: float
+    restore_value: no
+    initial_value: 'NAN'
+
 sensor:
   - platform: wifi_signal
     name: "Boiler WiFi Signal"
@@ -246,3 +273,121 @@ sensor:
 
   - platform: uptime
     name: "Boiler Uptime"
+
+  # ---------------------------------------------------------------------------
+  # Heating-circuit diagnostics, calculated from the boiler's own data.
+  # Sensors that only make sense in a certain boiler state skip publishing
+  # outside it, so Home Assistant keeps showing the last valid value (no NaN).
+  # ---------------------------------------------------------------------------
+
+  # Burner power estimated from the fan speed (actual_power reads 0 % at minimum
+  # modulation, so it cannot be used).
+  - platform: template
+    id: boiler_ch_power
+    name: "Boiler CH power estimate"
+    unit_of_measurement: "kW"
+    device_class: power
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 10s
+    lambda: |-
+      const float fan = id(boiler_fan_speed).state;
+      if (id(dietrich_state).state != 3 || std::isnan(fan) || fan <= 0) return 0.0f;  // 3 = Burning CH
+      float f = (fan - (float) ${fan_min_rpm}) / ((float) ${fan_max_rpm} - (float) ${fan_min_rpm});
+      if (f < 0.0f) f = 0.0f;
+      if (f > 1.0f) f = 1.0f;
+      const float kw = (float) ${ch_min_power_kw} + ((float) ${ch_max_power_kw} - (float) ${ch_min_power_kw}) * f;
+      id(last_burn_kw) = kw;
+      return kw;
+
+  # Flow minus return temperature while burning. Above ~25 K = too little flow
+  # through the boiler; around 3 K = lots of flow through the boiler.
+  - platform: template
+    name: "Boiler CH delta T"
+    unit_of_measurement: "K"
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 10s
+    lambda: |-
+      if (id(dietrich_state).state != 3) return {};  // keep last value
+      const float dt = id(boiler_flow_temp).state - id(boiler_return_temp).state;
+      if (std::isnan(dt)) return {};
+      return dt;
+
+  # Flow through the boiler: 60 / 4.186 * power [kW] / delta T [K]
+  - platform: template
+    name: "Boiler CH flow estimate"
+    unit_of_measurement: "L/min"
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 10s
+    lambda: |-
+      if (id(dietrich_state).state != 3) return {};  // keep last value
+      const float dt = id(boiler_flow_temp).state - id(boiler_return_temp).state;
+      const float kw = id(boiler_ch_power).state;
+      if (std::isnan(dt) || std::isnan(kw) || dt < 1.0f || kw <= 0.0f) return {};
+      return 14.33f * kw / dt;
+
+  # How fast the flow temperature rises while burning (K/min).
+  - platform: template
+    id: boiler_ch_heating_rate
+    name: "Boiler CH heating rate"
+    unit_of_measurement: "K/min"
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 30s
+    lambda: |-
+      static float last_t = NAN;
+      static uint32_t last_ms = 0;
+      static int last_s = -1;
+      const float t = id(boiler_flow_temp).state;
+      const int s = (int) id(dietrich_state).state;
+      const uint32_t now = millis();
+      const float prev_t = last_t;
+      const uint32_t prev_ms = last_ms;
+      const int prev_s = last_s;
+      last_t = t; last_ms = now; last_s = s;
+      if (s != 3 || prev_s != 3 || std::isnan(t) || std::isnan(prev_t) || now == prev_ms) return {};
+      return (t - prev_t) * 60000.0f / (float) (now - prev_ms);
+
+  # How fast the flow temperature falls during anti-cycling with the pump on (K/min).
+  - platform: template
+    id: boiler_ch_cooling_rate
+    name: "Boiler CH cooling rate"
+    unit_of_measurement: "K/min"
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 30s
+    lambda: |-
+      static float last_t = NAN;
+      static uint32_t last_ms = 0;
+      static int last_s = -1;
+      const float t = id(boiler_flow_temp).state;
+      const int s = (int) id(dietrich_state).state;
+      const uint32_t now = millis();
+      const float prev_t = last_t;
+      const uint32_t prev_ms = last_ms;
+      const int prev_s = last_s;
+      last_t = t; last_ms = now; last_s = s;
+      // 8 = Controlled stop (anti-cycling); only meaningful while the pump runs
+      if (s != 8 || prev_s != 8 || !(id(boiler_pump_percentage).state > 0) ||
+          std::isnan(t) || std::isnan(prev_t) || now == prev_ms) return {};
+      return (prev_t - t) * 60000.0f / (float) (now - prev_ms);
+
+  # Heat actually leaving through the radiators. While burning, the loop gains
+  # (power - loss); during anti-cycling it only loses (loss). The loop volume
+  # cancels out: loss = power * cooling / (heating + cooling).
+  # A blocked circuit gives a small value; a healthy one approaches the burner power.
+  - platform: template
+    name: "Boiler CH heat to radiators"
+    unit_of_measurement: "kW"
+    device_class: power
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 30s
+    lambda: |-
+      const float h = id(boiler_ch_heating_rate).state;
+      const float c = id(boiler_ch_cooling_rate).state;
+      const float p = id(last_burn_kw);
+      if (std::isnan(h) || std::isnan(c) || std::isnan(p) || h + c <= 0.0f) return {};
+      return p * c / (h + c);
