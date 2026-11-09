@@ -42,11 +42,13 @@ std::string Dietrich::hex_str_(const uint8_t *data, size_t len) {
   return s;
 }
 
-void Dietrich::publish_(sensor::Sensor *s, float value, uint32_t wait) {
+// Values are not published straight away: they are queued and published one
+// per loop() pass, so a full frame (up to ~60 sensors) never blocks the main
+// loop and the API/WiFi stack (and other components) keep running.
+void Dietrich::publish_(sensor::Sensor *s, float value) {
   if (s == nullptr)
     return;
-  s->publish_state(value);
-  delay(wait);  // delay for esphome to not disconnect api
+  this->publish_queue_.emplace_back(s, value);
 }
 
 // CRC16 (poly 0xA001, init 0xFFFF) over bytes 1..n-4; the frame ends with CRC (LSB, MSB) and 0x03
@@ -80,56 +82,65 @@ bool Dietrich::frame_valid_(const uint8_t *response, size_t n) const {
   return is_valid_crc_(response, n);
 }
 
-// Drop any stale bytes (e.g. the tail of a reply that arrived too late), send
-// the request and collect the reply. Boilers differ a lot in how fast they
-// answer (the EMC-M / PCU-05 needs ~240 ms before the first byte), so instead
-// of a fixed delay we wait until a valid frame is complete, the line has been
-// quiet for a while after data started, or the overall timeout expires.
-size_t Dietrich::transact_(const uint8_t *request, size_t req_len, uint8_t *buffer, size_t len) {
-  static const uint32_t RESPONSE_TIMEOUT_MS = 1000;
-  static const uint32_t INTER_BYTE_GAP_MS = 50;
+void Dietrich::start_request_(Request request) {
+  const bool calenta = this->variant_ == DIETRICH_VARIANT_CALENTA_V1_P5;
+  const uint8_t *cmd;
+  size_t cmd_len;
+  switch (request) {
+    case REQUEST_COUNTER1:
+      cmd = calenta ? CMD_COUNTER1_CALENTA : CMD_COUNTER1_MCR3;
+      cmd_len = calenta ? sizeof(CMD_COUNTER1_CALENTA) : sizeof(CMD_COUNTER1_MCR3);
+      break;
+    case REQUEST_COUNTER2:
+      cmd = calenta ? CMD_COUNTER2_CALENTA : CMD_COUNTER2_MCR3;
+      cmd_len = calenta ? sizeof(CMD_COUNTER2_CALENTA) : sizeof(CMD_COUNTER2_MCR3);
+      break;
+    case REQUEST_SAMPLE:
+    default:
+      cmd = calenta ? CMD_SAMPLE_CALENTA : CMD_SAMPLE_MCR3;
+      cmd_len = calenta ? sizeof(CMD_SAMPLE_CALENTA) : sizeof(CMD_SAMPLE_MCR3);
+      break;
+  }
 
+  // drop stale bytes (e.g. the tail of a reply that arrived after a timeout)
   while (this->available())
     this->read();
 
-  this->write_array(request, req_len);
-  this->flush();
-
-  memset(buffer, 0, len);
-  size_t n = 0;
-  const uint32_t start = millis();
-  uint32_t last_rx = start;
-
-  while (millis() - start < RESPONSE_TIMEOUT_MS) {
-    bool got = false;
-    while (this->available() && n < len) {
-      buffer[n++] = this->read();
-      got = true;
-    }
-    if (got) {
-      last_rx = millis();
-      // mcr3 frames carry a CRC, so a valid one is known to be complete
-      if (this->variant_ == DIETRICH_VARIANT_MCR3 && buffer[n - 1] == 0x03 && this->frame_valid_(buffer, n))
-        break;
-    } else if (n > 0 && millis() - last_rx > INTER_BYTE_GAP_MS) {
-      break;  // reply finished
-    }
-    if (n >= len)
-      break;
-    delay(5);  // also yields to WiFi on ESP8266
-  }
-  return n;
+  memset(this->rx_buffer_, 0, sizeof(this->rx_buffer_));
+  this->rx_len_ = 0;
+  this->write_array(cmd, cmd_len);
+  this->request_ = request;
+  this->request_start_ = millis();
+  this->last_rx_ = this->request_start_;
 }
 
-void Dietrich::get_sample_() {
-  uint8_t readdata[80];
+// Called from loop(): collect whatever bytes arrived since the last pass and
+// decide whether the reply is complete. Never waits.
+bool Dietrich::reply_complete_() {
+  static const uint32_t RESPONSE_TIMEOUT_MS = 1000;
+  static const uint32_t INTER_BYTE_GAP_MS = 50;
 
-  size_t n;
-  if (this->variant_ == DIETRICH_VARIANT_CALENTA_V1_P5) {
-    n = this->transact_(CMD_SAMPLE_CALENTA, sizeof(CMD_SAMPLE_CALENTA), readdata, sizeof(readdata));
-  } else {
-    n = this->transact_(CMD_SAMPLE_MCR3, sizeof(CMD_SAMPLE_MCR3), readdata, sizeof(readdata));
+  const uint32_t now = millis();
+  bool got = false;
+  while (this->available() && this->rx_len_ < sizeof(this->rx_buffer_)) {
+    this->rx_buffer_[this->rx_len_++] = this->read();
+    got = true;
   }
+
+  if (this->rx_len_ >= sizeof(this->rx_buffer_))
+    return true;
+  if (got) {
+    this->last_rx_ = now;
+    // mcr3 frames carry a CRC, so a valid one is known to be complete
+    return this->variant_ == DIETRICH_VARIANT_MCR3 && this->rx_buffer_[this->rx_len_ - 1] == 0x03 &&
+           this->frame_valid_(this->rx_buffer_, this->rx_len_);
+  }
+  if (this->rx_len_ > 0 && now - this->last_rx_ > INTER_BYTE_GAP_MS)
+    return true;  // line went quiet: reply finished
+  return now - this->request_start_ > RESPONSE_TIMEOUT_MS;
+}
+
+void Dietrich::handle_sample_(const uint8_t *readdata, size_t n) {
   // calenta_v1_p5 sample data (up to sub_state) is shifted one byte towards the frame start
   const int o = this->variant_ == DIETRICH_VARIANT_CALENTA_V1_P5 ? -1 : 0;
 
@@ -191,10 +202,10 @@ void Dietrich::get_sample_() {
       this->publish_(this->pump_bit7_sensor_, (bits >> 7) & 1);
     }
 
-    this->publish_(this->state_sensor_, readdata[47 + o], 200);
-    this->publish_(this->lockout_sensor_, readdata[48 + o], 200);
-    this->publish_(this->blocking_sensor_, readdata[49 + o], 200);
-    this->publish_(this->sub_state_sensor_, readdata[50 + o], 200);
+    this->publish_(this->state_sensor_, readdata[47 + o]);
+    this->publish_(this->lockout_sensor_, readdata[48 + o]);
+    this->publish_(this->blocking_sensor_, readdata[49 + o]);
+    this->publish_(this->sub_state_sensor_, readdata[50 + o]);
 
     if (this->read_all_) {
       this->publish_(this->hydro_pressure_sensor_, readdata[56] * 0.1f);
@@ -216,16 +227,8 @@ void Dietrich::get_sample_() {
   ESP_LOGD(TAG, "sample data (%u bytes): %s", (unsigned) n, hex_str_(readdata, n).c_str());
 }
 
-void Dietrich::get_counter_() {
-  uint8_t readdata[28];
+void Dietrich::handle_counter1_(const uint8_t *readdata, size_t n) {
   const bool calenta = this->variant_ == DIETRICH_VARIANT_CALENTA_V1_P5;
-
-  size_t n;
-  if (calenta) {
-    n = this->transact_(CMD_COUNTER1_CALENTA, sizeof(CMD_COUNTER1_CALENTA), readdata, sizeof(readdata));
-  } else {
-    n = this->transact_(CMD_COUNTER1_MCR3, sizeof(CMD_COUNTER1_MCR3), readdata, sizeof(readdata));
-  }
 
   if (this->frame_valid_(readdata, n)) {
     if (calenta) {
@@ -247,12 +250,10 @@ void Dietrich::get_counter_() {
   }
 
   ESP_LOGD(TAG, "counter1 data (%u bytes): %s", (unsigned) n, hex_str_(readdata, n).c_str());
+}
 
-  if (calenta) {
-    n = this->transact_(CMD_COUNTER2_CALENTA, sizeof(CMD_COUNTER2_CALENTA), readdata, sizeof(readdata));
-  } else {
-    n = this->transact_(CMD_COUNTER2_MCR3, sizeof(CMD_COUNTER2_MCR3), readdata, sizeof(readdata));
-  }
+void Dietrich::handle_counter2_(const uint8_t *readdata, size_t n) {
+  const bool calenta = this->variant_ == DIETRICH_VARIANT_CALENTA_V1_P5;
 
   if (this->frame_valid_(readdata, n)) {
     if (calenta) {
@@ -273,21 +274,49 @@ void Dietrich::get_counter_() {
 }
 
 void Dietrich::update() {
-  if (this->reading_data_)
+  if (this->request_ != REQUEST_NONE) {
+    ESP_LOGW(TAG, "previous request still running, skipping this update");
     return;
-
-  this->reading_data_ = true;
-
-  this->counter_timer_++;
-
-  if (this->counter_timer_ >= 8) {
-    this->counter_timer_ = 0;
-    this->get_counter_();
-  } else {
-    this->get_sample_();
   }
 
-  this->reading_data_ = false;
+  this->counter_timer_++;
+  if (this->counter_timer_ >= 8) {
+    this->counter_timer_ = 0;
+    this->start_request_(REQUEST_COUNTER1);  // REQUEST_COUNTER2 follows from loop()
+  } else {
+    this->start_request_(REQUEST_SAMPLE);
+  }
+}
+
+void Dietrich::loop() {
+  if (this->request_ != REQUEST_NONE && this->reply_complete_()) {
+    const Request done = this->request_;
+    this->request_ = REQUEST_NONE;
+    switch (done) {
+      case REQUEST_SAMPLE:
+        this->handle_sample_(this->rx_buffer_, this->rx_len_);
+        break;
+      case REQUEST_COUNTER1:
+        this->handle_counter1_(this->rx_buffer_, this->rx_len_);
+        this->start_request_(REQUEST_COUNTER2);
+        break;
+      case REQUEST_COUNTER2:
+        this->handle_counter2_(this->rx_buffer_, this->rx_len_);
+        break;
+      default:
+        break;
+    }
+  }
+
+  // publish at most one queued value per loop pass
+  if (this->publish_index_ < this->publish_queue_.size()) {
+    auto &item = this->publish_queue_[this->publish_index_++];
+    item.first->publish_state(item.second);
+    if (this->publish_index_ >= this->publish_queue_.size()) {
+      this->publish_queue_.clear();
+      this->publish_index_ = 0;
+    }
+  }
 }
 
 void Dietrich::dump_config() {
