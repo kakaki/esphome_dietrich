@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+#include <vector>
 #include "esphome/core/component.h"
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/uart/uart.h"
@@ -95,16 +97,25 @@ class Dietrich : public PollingComponent, public uart::UARTDevice {
   SUB_SENSOR(number_flame_loss)
 
   void update() override;
+  void loop() override;
   void dump_config() override;
   float get_setup_priority() const override { return setup_priority::DATA; }
 
  protected:
-  void get_sample_();
-  void get_counter_();
-  // publish only if the sensor is configured; the short delay keeps the
-  // API/WiFi stack fed so Home Assistant does not disconnect
-  void publish_(sensor::Sensor *s, float value, uint32_t wait = 100);
-  size_t read_response_(uint8_t *buffer, size_t len);
+  enum Request : uint8_t {
+    REQUEST_NONE = 0,
+    REQUEST_SAMPLE,
+    REQUEST_COUNTER1,
+    REQUEST_COUNTER2,
+  };
+
+  void start_request_(Request request);
+  bool reply_complete_();
+  void handle_sample_(const uint8_t *readdata, size_t n);
+  void handle_counter1_(const uint8_t *readdata, size_t n);
+  void handle_counter2_(const uint8_t *readdata, size_t n);
+  // queue the value for publishing from loop(), only if the sensor is configured
+  void publish_(sensor::Sensor *s, float value);
   bool frame_valid_(const uint8_t *response, size_t n) const;
   static bool is_valid_crc_(const uint8_t *response, size_t n);
   static float signed_float_(float value);
@@ -112,7 +123,13 @@ class Dietrich : public PollingComponent, public uart::UARTDevice {
   static std::string hex_str_(const uint8_t *data, size_t len);
 
   DietrichVariant variant_{DIETRICH_VARIANT_MCR3};
-  bool reading_data_{false};
+  Request request_{REQUEST_NONE};
+  uint8_t rx_buffer_[80]{};
+  size_t rx_len_{0};
+  uint32_t request_start_{0};
+  uint32_t last_rx_{0};
+  std::vector<std::pair<sensor::Sensor *, float>> publish_queue_;
+  size_t publish_index_{0};
   bool read_all_{true};
   int counter_timer_{99};
 };

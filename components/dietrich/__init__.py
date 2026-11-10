@@ -146,7 +146,7 @@ SENSOR_SCHEMAS = {
     "hru": _bit_schema(),
     "control_temp": _temp_schema(),
     "dhw_flowrate": sensor.sensor_schema(
-        unit_of_measurement="l/min",
+        unit_of_measurement="L/min",  # Home Assistant's spelling
         accuracy_decimals=0,
         state_class=STATE_CLASS_MEASUREMENT,
     ),
